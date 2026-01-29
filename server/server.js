@@ -5,7 +5,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/authRoutes");
 const exerciseRoutes = require("./routes/exerciseRoutes");
-//const workoutRoutes = require("./routes/workoutRoutes");
+const workoutRoutes = require("./routes/workoutRoutes");
 //const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
@@ -25,7 +25,7 @@ app.use(cookieParser(process.env.COOKIE_SECRET));
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/exercises", exerciseRoutes);
-//app.use("/api/workouts", workoutRoutes);
+app.use("/api/workouts", workoutRoutes);
 //app.use("/api/dashboard", dashboardRoutes);
 
 // 404 handler
