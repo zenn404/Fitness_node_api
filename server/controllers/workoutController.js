@@ -76,26 +76,9 @@ const getWorkout = async (req, res) => {
     }
 
     // Get exercises for this workout
-    const { data: workoutExercises, error: exercisesError } = await supabase
-      .from("workout_exercises")
-      .select(
-        `
-        id,
-        sets,
-        reps,
-        rest_seconds,
-        order_index,
-        notes,
-        exercises (
-          id,
-          name,
-          description,
-          muscle_group,
-          difficulty,
-          image_url
-        )
-      `
-      )
+    const { data: exercises, error: exercisesError } = await supabase
+      .from("exercises")
+      .select("*")
       .eq("workout_id", id)
       .order("order_index", { ascending: true });
 
@@ -108,7 +91,7 @@ const getWorkout = async (req, res) => {
       data: {
         workout: {
           ...workout,
-          exercises: workoutExercises || [],
+          exercises: exercises || [],
         },
       },
     });
@@ -315,7 +298,7 @@ const addExerciseToWorkout = async (req, res) => {
           name,
           muscle_group
         )
-      `
+      `,
       )
       .single();
 
