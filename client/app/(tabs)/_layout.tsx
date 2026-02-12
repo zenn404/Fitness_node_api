@@ -40,9 +40,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="workout"
         options={{
-          title: "Workout",
+          title: "Plan",
           tabBarIcon: ({ color }) => (
-            <MaterialIcons name="extension" size={24} color={color} />
+            <MaterialIcons name="fitness-center" size={24} color={color} />
           ),
         }}
       />
@@ -51,7 +51,7 @@ export default function TabLayout() {
         options={{
           title: "Chat",
           tabBarIcon: ({ color }) => (
-            <MaterialIcons size={28} name="wechat" color={color} />
+            <MaterialIcons size={28} name="chat" color={color} />
           ),
         }}
       />
@@ -60,7 +60,7 @@ export default function TabLayout() {
         options={{
           title: "Progress",
           tabBarIcon: ({ color }) => (
-            <MaterialIcons size={28} name="candlestick-chart" color={color} />
+            <MaterialIcons size={28} name="show-chart" color={color} />
           ),
         }}
       />
