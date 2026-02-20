@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, ActivityIndicator, RefreshControl } from "react-native";
+import { ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 
@@ -9,14 +9,11 @@ import { Box } from "@/components/ui/box";
 import { VStack } from "@/components/ui/vstack";
 import { HStack } from "@/components/ui/hstack";
 import { Pressable } from "@/components/ui/pressable";
-import { useRouter } from "expo-router";
 import { useAuthStore } from "@/store/auth-store";
 import { api, DashboardStats, Activity } from "@/services/api";
 
 export default function HomeScreen() {
-  const router = useRouter();
   const { user, token } = useAuthStore();
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -28,12 +25,7 @@ export default function HomeScreen() {
     fetchDashboardData();
   }, [token]);
 
-  const fetchDashboardData = async (isRefresh = false) => {
-    if (isRefresh) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
+  const fetchDashboardData = async () => {
     if (!token) {
       setIsLoading(false);
       return;
@@ -58,24 +50,14 @@ export default function HomeScreen() {
       console.error("Error fetching dashboard data:", error);
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
   };
 
-  const handleRefresh = () => {
-    fetchDashboardData(true);
-  };
-
-  const handleQuickWorkout = () => {
-    router.push('/(tabs)/workout');}
   return (
     <SafeAreaView className="flex-1">
       <ScrollView
         className="flex-1 px-4"
         contentContainerStyle={{ paddingBottom: 120 }}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#C0EB6A" colors={["#C0EB6A"]} />
-        }
       >
         <VStack className="mt-4 mb-6">
           <Text className="text-gray-400">Welcome back,</Text>
@@ -127,7 +109,7 @@ export default function HomeScreen() {
           </Box>
         )}
 
-        <Pressable className="bg-primary-500 mb-6 p-4 rounded-2xl" onPress={handleQuickWorkout}>
+        <Pressable className="bg-primary-500 mb-6 p-4 rounded-2xl">
           <HStack className="justify-center items-center" space="sm">
             <MaterialIcons name="play-arrow" size={28} color="#1f2937" />
             <Text className="font-bold text-gray-900 text-lg">

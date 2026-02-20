@@ -143,49 +143,7 @@ class ApiService {
       token,
     });
   }
-  async getProgressData(token: string): Promise<ApiResponse<ProgressData>> {
-    return this.request("/api/dashboard/progress", {
-      method: "GET",
-      token,
-    });
-  }
-    // Session endpoints
-    async startWorkoutSession(
-      token: string,
-      workoutId: string,
-    ): Promise<ApiResponse<{ session: WorkoutSession }>> {
-      return this.request("/api/sessions/start", {
-        method: "POST",
-        body: { workout_id: workoutId },
-        token,
-      });
-    }
-  
-    async completeWorkoutSession(
-      token: string,
-      sessionId: string,
-    ): Promise<ApiResponse<{ session: WorkoutSession }>> {
-      return this.request(`/api/sessions/${sessionId}/complete`, {
-        method: "PUT",
-        token,
-      });
-    } 
-   
-    
-  
 }
-export interface WorkoutSession {
-  id: string;
-  user_id: string;
-  workout_id: string;
-  status: "in_progress" | "completed";
-  started_at: string;
-  completed_at?: string;
-  total_duration_seconds?: number;
-  calories_burned?: number;
-}
-
-
 
 export interface User {
   id: string;
@@ -193,21 +151,7 @@ export interface User {
   name: string;
   created_at: string;
 }
-export interface Exercise {
-  id: string;
-  workout_id: string;
-  name: string;
-  description?: string;
-  muscle_group: string;
-  difficulty: "Beginner" | "Intermediate" | "Advanced";
-  sets: number;
-  reps: number;
-  rest_seconds: number;
-  order_index: number;
-  notes?: string;
-  image_url?: string;
-  created_at: string;
-}
+
 export interface Workout {
   id: string;
   user_id?: string;
@@ -217,7 +161,6 @@ export interface Workout {
   duration_minutes?: number;
   created_at: string;
   image_url?: string;
-  exercises?: Exercise[];
 }
 
 export interface DashboardStats {
@@ -239,21 +182,6 @@ export interface Activity {
   duration: string | null;
   calories: number | null;
   date: string;
-}
-export interface WeeklyChartItem {
-  day: string;
-  workouts: number;
-  minutes: number;
-  calories: number;
-}
-
-export interface ProgressData {
-  weeklyChart: WeeklyChartItem[];
-  totalStats: {
-    workouts: number;
-    calories: number;
-    minutes: number;
-  };
 }
 
 export const api = new ApiService(API_BASE_URL);
