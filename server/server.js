@@ -6,7 +6,9 @@ const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/authRoutes");
 const exerciseRoutes = require("./routes/exerciseRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
-//const dashboardRoutes = require("./routes/dashboardRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
+const sessionRoutes = require("./routes/sessionRoutes");
+const nutritionRoutes = require("./routes/nutritionRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,8 +28,9 @@ app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use("/api/auth", authRoutes);
 app.use("/api/exercises", exerciseRoutes);
 app.use("/api/workouts", workoutRoutes);
-//app.use("/api/dashboard", dashboardRoutes);
-
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/sessions", sessionRoutes);
+app.use("/api", nutritionRoutes);
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
