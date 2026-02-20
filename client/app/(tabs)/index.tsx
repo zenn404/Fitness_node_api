@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Pressable } from 'react-native';
-import { Box, Heading, VStack } from '@gluestack-ui/themed';
+import { Box } from '@/components/ui/box';
+import { Heading } from '@/components/ui/heading';
+import { VStack } from '@/components/ui/vstack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Link } from 'expo-router';
@@ -9,11 +11,8 @@ const Card = ({ title, href }: { title: string, href: string }) => (
   <Link href={href} asChild>
     <Pressable>
       <Box
-        bg="rgba(255, 255, 255, 0.1)"
-        p="$4"
-        borderRadius="$lg"
-        w="100%"
-        sx={{
+        className="bg-white/10 p-4 rounded-lg w-full"
+        style={{
           // soft shadows
           shadowColor: '#000',
           shadowOffset: {
@@ -25,7 +24,7 @@ const Card = ({ title, href }: { title: string, href: string }) => (
           elevation: 5,
         }}
       >
-        <Heading size="md" color="$textLight50" textAlign="center">
+        <Heading size="md" className="text-gray-100 text-center">
           {title}
         </Heading>
       </Box>
@@ -35,19 +34,19 @@ const Card = ({ title, href }: { title: string, href: string }) => (
 
 export default function HomeScreen() {
   return (
-    <Box flex={1}>
+    <Box className="flex-1">
       <LinearGradient
         // Modern purple/blue tones
         colors={['#2A2D4F', '#3F3B6C', '#613C70']}
         style={styles.gradient}
       />
-      <VStack flex={1} p="$6" space="md" alignItems="center" paddingTop={100}>
+      <VStack className="flex-1 p-6 items-center pt-[100px]" space="md">
         <FontAwesome5 name="robot" size={48} color="white" />
-        <Heading color="$textLight50" mt="$4" size="2xl">
+        <Heading className="text-gray-100 mt-4" size="2xl">
           AI Fitness Coach
         </Heading>
 
-        <VStack space="lg" mt="$10" width="100%">
+        <VStack space="lg" className="mt-10 w-full">
           <Card title="Today's Diet Summary" href="/(tabs)/progress" />
           <Card title="Today's Workout" href="/(tabs)/workout" />
           <Card title="Progress Tracker" href="/(tabs)/progress" />
