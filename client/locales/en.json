@@ -19,7 +19,8 @@
       "workout": "Workout",
       "chat": "Chat",
       "progress": "Progress",
-      "profile": "Profile"
+      "profile": "Profile",
+      "nutrition": "Nutrition"
     },
     "auth": {
       "welcomeBack": "Welcome Back",

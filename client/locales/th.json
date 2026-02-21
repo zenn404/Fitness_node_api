@@ -19,7 +19,8 @@
       "workout": "ออกกำลังกาย",
       "chat": "แชท",
       "progress": "ความคืบหน้า",
-      "profile": "โปรไฟล์"
+      "profile": "โปรไฟล์",
+      "nutrition": "โภชนาการ"
     },
     "auth": {
       "welcomeBack": "ยินดีต้อนรับกลับ",

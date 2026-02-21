@@ -142,6 +142,40 @@ class ApiService {
     });
   }
 
+  // Nutrition endpoints
+  async searchNutrition(
+    query: string
+  ): Promise<ApiResponse<{ items: NutritionItem[] }>> {
+    const encoded = encodeURIComponent(query);
+    return this.request(`/api/nutrition?query=${encoded}`, {
+      method: "GET",
+    });
+  }
+
+  async getDailyLogs(
+    date: string
+  ): Promise<ApiResponse<{ logs: DailyLog[] }>> {
+    const encoded = encodeURIComponent(date);
+    return this.request(`/api/logs?date=${encoded}`, {
+      method: "GET",
+    });
+  }
+
+  async createDailyLog(
+    payload: CreateDailyLogPayload
+  ): Promise<ApiResponse<{ log: DailyLog }>> {
+    return this.request("/api/logs", {
+      method: "POST",
+      body: payload,
+    });
+  }
+
+  async deleteDailyLog(id: string): Promise<ApiResponse> {
+    return this.request(`/api/logs/${id}`, {
+      method: "DELETE",
+    });
+  }
+
   // Session endpoints
   async startWorkoutSession(
     token: string,
@@ -250,6 +284,44 @@ export interface ProgressData {
     calories: number;
     minutes: number;
   };
+}
+
+
+export interface NutritionItem {
+  name: string;
+  calories: number;
+  serving_size_g: number;
+  protein_g: number;
+  carbohydrates_total_g: number;
+  fat_total_g: number;
+  sugar_g: number;
+  fiber_g: number;
+}
+
+export interface DailyLog {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  sugar: number;
+  fiber: number;
+  serving_size: number;
+  log_date: string;
+  created_at: string;
+}
+
+export interface CreateDailyLogPayload {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  sugar: number;
+  fiber: number;
+  serving_size: number;
+  log_date?: string;
 }
 
 export const api = new ApiService(API_BASE_URL);

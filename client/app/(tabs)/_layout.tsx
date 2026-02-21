@@ -2,8 +2,10 @@ import { Tabs } from "expo-router";
 import React from "react";
 import { Platform } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 export default function TabLayout() {
+  const {t}=useTranslation();
   return (
     <Tabs
       screenOptions={{
@@ -31,7 +33,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: t("tabs.home"),
           tabBarIcon: ({ color }) => (
             <MaterialIcons name="home" size={28} color={color} />
           ),
@@ -40,16 +42,25 @@ export default function TabLayout() {
       <Tabs.Screen
         name="workout"
         options={{
-          title: "Workout",
+          title: t("tabs.workout"),
           tabBarIcon: ({ color }) => (
             <MaterialIcons name="extension" size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
+        name="nutrition"
+        options={{
+          title: t("tabs.nutrition"),
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="restaurant-menu" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="chat"
         options={{
-          title: "Chat",
+          title: t("tabs.chat"),
           tabBarIcon: ({ color }) => (
             <MaterialIcons size={28} name="wechat" color={color} />
           ),
@@ -58,7 +69,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="progress"
         options={{
-          title: "Progress",
+          title: t("tabs.progress"),
           tabBarIcon: ({ color }) => (
             <MaterialIcons size={28} name="candlestick-chart" color={color} />
           ),
