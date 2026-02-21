@@ -1,13 +1,14 @@
-import { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, ActivityIndicator } from "react-native";
+import { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
 import "react-native-reanimated";
 
 import { useAuthStore } from "@/store/auth-store";
 
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import "@/global.css";
+import "@/lib/i18n";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -16,7 +17,8 @@ export const unstable_settings = {
 function useProtectedRoute() {
   const segments = useSegments();
   const router = useRouter();
-  const { isAuthenticated, isInitialized, checkAuth } = useAuthStore();
+  const { isAuthenticated, isInitialized, needsOnboarding, checkAuth } =
+    useAuthStore();
 
   useEffect(() => {
     checkAuth();
@@ -26,13 +28,21 @@ function useProtectedRoute() {
     if (!isInitialized) return;
 
     const inAuthGroup = segments[0] === "(auth)";
+    const inOnboarding =
+      segments[0] === "onboarding-info" || segments[0] === "onboarding-goals";
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/login");
-    } else if (isAuthenticated && inAuthGroup) {
+    } else if (isAuthenticated && needsOnboarding && !inOnboarding) {
+      router.replace("/onboarding-info");
+    } else if (
+      isAuthenticated &&
+      !needsOnboarding &&
+      (inAuthGroup || inOnboarding)
+    ) {
       router.replace("/(tabs)");
     }
-  }, [isAuthenticated, segments, isInitialized]);
+  }, [isAuthenticated, segments, isInitialized, needsOnboarding]);
 }
 
 export default function RootLayout() {
@@ -61,9 +71,20 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="onboarding-info" />
+        <Stack.Screen name="onboarding-goals" />
         <Stack.Screen
           name="modal"
           options={{ presentation: "modal", title: "Modal", headerShown: true }}
+        />
+        <Stack.Screen
+          name="workout-session"
+          options={{
+            title: "Workout Session",
+            presentation: "modal",
+            headerShown: false,
+            animation: "slide_from_bottom",
+          }}
         />
       </Stack>
       <StatusBar style="light" />

@@ -19,6 +19,10 @@ create table users (
   name text not null,
   email text unique not null,
   password text not null,
+  age integer,
+  weight decimal(5,2),
+  height decimal(5,2),
+  goals text,
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 

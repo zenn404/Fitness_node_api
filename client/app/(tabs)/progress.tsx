@@ -1,5 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Dimensions,
@@ -39,7 +40,6 @@ function WeeklyBarChart({ data }: { data: WeeklyChartItem[] }) {
 
         return (
           <React.Fragment key={item.day}>
-            {/* Bar background */}
             <Rect
               x={x}
               y={0}
@@ -49,7 +49,6 @@ function WeeklyBarChart({ data }: { data: WeeklyChartItem[] }) {
               ry={BAR_RADIUS}
               fill="#1f2937"
             />
-            {/* Active bar */}
             {isActive && (
               <Rect
                 x={x}
@@ -61,7 +60,6 @@ function WeeklyBarChart({ data }: { data: WeeklyChartItem[] }) {
                 fill="#C0EB6A"
               />
             )}
-            {/* Workout count label */}
             {isActive && (
               <SvgText
                 x={x + barWidth / 2}
@@ -74,7 +72,72 @@ function WeeklyBarChart({ data }: { data: WeeklyChartItem[] }) {
                 {item.workouts}
               </SvgText>
             )}
-            {/* Day label */}
+            <SvgText
+              x={x + barWidth / 2}
+              y={CHART_HEIGHT + 12}
+              fontSize={11}
+              fill="#9ca3af"
+              textAnchor="middle"
+            >
+              {item.day}
+            </SvgText>
+          </React.Fragment>
+        );
+      })}
+    </Svg>
+  );
+}
+
+function CaloriesBarChart({ data }: { data: WeeklyChartItem[] }) {
+  const chartWidth = screenWidth - 64;
+  const maxCalories = Math.max(...data.map((d) => d.calories), 1);
+  const barWidth = (chartWidth - data.length * 8) / data.length;
+
+  return (
+    <Svg width={chartWidth} height={CHART_HEIGHT + 28}>
+      {data.map((item, index) => {
+        const barHeight =
+          maxCalories > 0
+            ? (item.calories / maxCalories) * (CHART_HEIGHT - 20)
+            : 0;
+        const x = index * (barWidth + 8) + 4;
+        const y = CHART_HEIGHT - 20 - barHeight;
+        const isActive = item.calories > 0;
+
+        return (
+          <React.Fragment key={item.day}>
+            <Rect
+              x={x}
+              y={0}
+              width={barWidth}
+              height={CHART_HEIGHT - 20}
+              rx={BAR_RADIUS}
+              ry={BAR_RADIUS}
+              fill="#1f2937"
+            />
+            {isActive && (
+              <Rect
+                x={x}
+                y={y}
+                width={barWidth}
+                height={barHeight}
+                rx={BAR_RADIUS}
+                ry={BAR_RADIUS}
+                fill="#f97316"
+              />
+            )}
+            {isActive && (
+              <SvgText
+                x={x + barWidth / 2}
+                y={y - 6}
+                fontSize={11}
+                fontWeight="bold"
+                fill="#f97316"
+                textAnchor="middle"
+              >
+                {item.calories}
+              </SvgText>
+            )}
             <SvgText
               x={x + barWidth / 2}
               y={CHART_HEIGHT + 12}
@@ -97,6 +160,7 @@ export default function ProgressScreen() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchProgressData();
@@ -161,8 +225,8 @@ export default function ProgressScreen() {
         }
       >
         <VStack className="mt-4 mb-6">
-          <Heading size="2xl">Progress</Heading>
-          <Text className="text-gray-400">Track your fitness journey</Text>
+          <Heading size="2xl">{t("progress.title")}</Heading>
+          <Text className="text-gray-400">{t("progress.trackJourney")}</Text>
         </VStack>
 
         {isLoading && (
@@ -177,12 +241,14 @@ export default function ProgressScreen() {
             <Box className="bg-gray-900 mb-6 p-4 border border-gray-800 rounded-2xl">
               <HStack className="justify-between items-center mb-4">
                 <VStack>
-                  <Text className="text-gray-400 text-sm">This Week</Text>
-                  <Heading size="lg">Weekly Activity</Heading>
+                  <Text className="text-gray-400 text-sm">
+                    {t("progress.thisWeek")}
+                  </Text>
+                  <Heading size="lg">{t("progress.weeklyActivity")}</Heading>
                 </VStack>
                 <Box className="bg-primary-500/20 px-3 py-1 rounded-full">
                   <Text className="text-primary-500 font-semibold text-sm">
-                    {weeklyTotal} workout{weeklyTotal !== 1 ? "s" : ""}
+                    {t("progress.workoutCount", { count: weeklyTotal })}
                   </Text>
                 </Box>
               </HStack>
@@ -194,10 +260,33 @@ export default function ProgressScreen() {
               </Box>
             </Box>
 
+            {/* Calories Burned Chart */}
+            <Box className="bg-gray-900 mb-6 p-4 border border-gray-800 rounded-2xl">
+              <HStack className="justify-between items-center mb-4">
+                <VStack>
+                  <Text className="text-gray-400 text-sm">
+                    {t("progress.thisWeek")}
+                  </Text>
+                  <Heading size="lg">{t("progress.caloriesBurned")}</Heading>
+                </VStack>
+                <Box className="bg-orange-500/20 px-3 py-1 rounded-full">
+                  <Text className="text-orange-500 font-semibold text-sm">
+                    {weeklyCalories} {t("common.kcal")}
+                  </Text>
+                </Box>
+              </HStack>
+
+              <Box className="items-center">
+                {progressData?.weeklyChart && (
+                  <CaloriesBarChart data={progressData.weeklyChart} />
+                )}
+              </Box>
+            </Box>
+
             {/* All-Time Stats */}
             <Box className="bg-gray-900 mb-6 p-4 border border-gray-800 rounded-2xl">
               <Heading size="md" className="mb-3">
-                All-Time Stats
+                {t("progress.allTimeStats")}
               </Heading>
               <VStack space="md">
                 <HStack className="justify-between items-center">
@@ -207,7 +296,9 @@ export default function ProgressScreen() {
                       size={20}
                       color="#C0EB6A"
                     />
-                    <Text className="text-gray-300">Total Workouts</Text>
+                    <Text className="text-gray-300">
+                      {t("progress.totalWorkouts")}
+                    </Text>
                   </HStack>
                   <Text className="font-bold text-lg">
                     {progressData?.totalStats.workouts || 0}
@@ -220,19 +311,23 @@ export default function ProgressScreen() {
                       size={20}
                       color="#f97316"
                     />
-                    <Text className="text-gray-300">Total Calories</Text>
+                    <Text className="text-gray-300">
+                      {t("progress.totalCalories")}
+                    </Text>
                   </HStack>
                   <Text className="font-bold text-lg">
-                    {progressData?.totalStats.calories || 0} kcal
+                    {progressData?.totalStats.calories || 0} {t("common.kcal")}
                   </Text>
                 </HStack>
                 <HStack className="justify-between items-center">
                   <HStack className="items-center" space="sm">
                     <MaterialIcons name="schedule" size={20} color="#3b82f6" />
-                    <Text className="text-gray-300">Total Minutes</Text>
+                    <Text className="text-gray-300">
+                      {t("progress.totalMinutes")}
+                    </Text>
                   </HStack>
                   <Text className="font-bold text-lg">
-                    {progressData?.totalStats.minutes || 0} min
+                    {progressData?.totalStats.minutes || 0} {t("common.min")}
                   </Text>
                 </HStack>
               </VStack>

@@ -205,7 +205,7 @@ const getProfile = async (req, res) => {
 
     const { data: user, error } = await supabase
       .from("users")
-      .select("id, email, name, created_at")
+      .select("id, email, name, age, weight, height, goals, created_at")
       .eq("id", req.user.id)
       .single();
 
@@ -239,11 +239,15 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    const { name, email } = req.body;
+    const { name, email, age, weight, height, goals } = req.body;
     const updateData = {};
 
     if (name) updateData.name = name;
     if (email) updateData.email = email;
+    if (age !== undefined) updateData.age = age;
+    if (weight !== undefined) updateData.weight = weight;
+    if (height !== undefined) updateData.height = height;
+    if (goals !== undefined) updateData.goals = goals;
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
@@ -256,7 +260,7 @@ const updateProfile = async (req, res) => {
       .from("users")
       .update(updateData)
       .eq("id", req.user.id)
-      .select("id, email, name, created_at")
+      .select("id, email, name, age, weight, height, goals, created_at")
       .single();
 
     if (error) {

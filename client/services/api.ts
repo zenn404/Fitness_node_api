@@ -1,20 +1,4 @@
-import Constants from "expo-constants";
-import { Platform } from "react-native";
-
-// Derive a sensible default API base URL for simulators/emulators and devices.
-const getDefaultBaseUrl = () => {
-  // Android emulator maps host machine to 10.0.2.2
-  if (Platform.OS === "android") return "http://10.0.2.2:3000";
-
-  // Use dev host IP when available (e.g., iOS simulator hitting Metro host)
-  const host = Constants.expoConfig?.hostUri?.split(":")?.[0];
-  if (host) return `http://${host}:3000`;
-
-  // Fallback to localhost (works on iOS simulator)
-  return "http://localhost:3000";
-};
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || getDefaultBaseUrl();
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -33,13 +17,11 @@ class ApiService {
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
-    console.log("API Base URL:", this.baseUrl);
-
   }
 
   private async request<T>(
     endpoint: string,
-    options: RequestOptions
+    options: RequestOptions,
   ): Promise<ApiResponse<T>> {
     const { method, body, token } = options;
 
@@ -72,20 +54,18 @@ class ApiService {
   // Auth endpoints
   async login(
     email: string,
-    password: string
+    password: string,
   ): Promise<ApiResponse<{ user: User; token: string }>> {
-    console.log("Login endpoint:", "/api/auth/login");
     return this.request("/api/auth/login", {
       method: "POST",
       body: { email, password },
-
     });
   }
 
   async register(
     name: string,
     email: string,
-    password: string
+    password: string,
   ): Promise<ApiResponse<{ user: User; token: string }>> {
     return this.request("/api/auth/register", {
       method: "POST",
@@ -103,6 +83,17 @@ class ApiService {
   async getProfile(token: string): Promise<ApiResponse<{ user: User }>> {
     return this.request("/api/auth/profile", {
       method: "GET",
+      token,
+    });
+  }
+
+  async updateProfile(
+    token: string,
+    data: { age?: number; weight?: number; height?: number; goals?: string },
+  ): Promise<ApiResponse<{ user: User }>> {
+    return this.request("/api/auth/profile", {
+      method: "PUT",
+      body: data,
       token,
     });
   }
@@ -135,7 +126,7 @@ class ApiService {
 
   async getRecentActivity(
     token: string,
-    limit?: number
+    limit?: number,
   ): Promise<ApiResponse<{ activities: Activity[] }>> {
     const query = limit ? `?limit=${limit}` : "";
     return this.request(`/api/dashboard/activity${query}`, {
@@ -143,37 +134,37 @@ class ApiService {
       token,
     });
   }
+
   async getProgressData(token: string): Promise<ApiResponse<ProgressData>> {
     return this.request("/api/dashboard/progress", {
       method: "GET",
       token,
     });
   }
-    // Session endpoints
-    async startWorkoutSession(
-      token: string,
-      workoutId: string,
-    ): Promise<ApiResponse<{ session: WorkoutSession }>> {
-      return this.request("/api/sessions/start", {
-        method: "POST",
-        body: { workout_id: workoutId },
-        token,
-      });
-    }
-  
-    async completeWorkoutSession(
-      token: string,
-      sessionId: string,
-    ): Promise<ApiResponse<{ session: WorkoutSession }>> {
-      return this.request(`/api/sessions/${sessionId}/complete`, {
-        method: "PUT",
-        token,
-      });
-    } 
-   
-    
-  
+
+  // Session endpoints
+  async startWorkoutSession(
+    token: string,
+    workoutId: string,
+  ): Promise<ApiResponse<{ session: WorkoutSession }>> {
+    return this.request("/api/sessions/start", {
+      method: "POST",
+      body: { workout_id: workoutId },
+      token,
+    });
+  }
+
+  async completeWorkoutSession(
+    token: string,
+    sessionId: string,
+  ): Promise<ApiResponse<{ session: WorkoutSession }>> {
+    return this.request(`/api/sessions/${sessionId}/complete`, {
+      method: "PUT",
+      token,
+    });
+  }
 }
+
 export interface WorkoutSession {
   id: string;
   user_id: string;
@@ -185,14 +176,17 @@ export interface WorkoutSession {
   calories_burned?: number;
 }
 
-
-
 export interface User {
   id: string;
   email: string;
   name: string;
+  age?: number;
+  weight?: number;
+  height?: number;
+  goals?: string;
   created_at: string;
 }
+
 export interface Exercise {
   id: string;
   workout_id: string;
@@ -208,6 +202,7 @@ export interface Exercise {
   image_url?: string;
   created_at: string;
 }
+
 export interface Workout {
   id: string;
   user_id?: string;
@@ -240,6 +235,7 @@ export interface Activity {
   calories: number | null;
   date: string;
 }
+
 export interface WeeklyChartItem {
   day: string;
   workouts: number;
