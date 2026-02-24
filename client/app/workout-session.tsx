@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Animated, Pressable as RNPressable } from "react-native";
+import { Alert, Animated, Linking, Pressable as RNPressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Box } from "@/components/ui/box";
@@ -229,6 +229,26 @@ export default function WorkoutSessionScreen() {
     moveToNextPhase();
   };
 
+  const handleOpenTutorial = async () => {
+    const tutorialUrl = currentExercise?.tutorial_url;
+    if (!tutorialUrl) {
+      Alert.alert("No tutorial", "No tutorial link is available for this exercise.");
+      return;
+    }
+
+    try {
+      const supported = await Linking.canOpenURL(tutorialUrl);
+      if (!supported) {
+        Alert.alert("Cannot open link", "This tutorial link is not valid.");
+        return;
+      }
+      await Linking.openURL(tutorialUrl);
+    } catch (error) {
+      console.error("Failed to open tutorial link:", error);
+      Alert.alert("Error", "Failed to open the tutorial link.");
+    }
+  };
+
   const handleFinish = async () => {
     if (token && sessionId) {
       try {
@@ -419,17 +439,19 @@ export default function WorkoutSessionScreen() {
       {/* Control Buttons */}
       <Box className="px-6 pb-6">
         {!session.isStarted ? (
-          <RNPressable
-            onPress={handleStart}
-            className="w-full bg-primary-500 py-4 rounded-2xl active:opacity-90"
-          >
-            <HStack className="justify-center items-center" space="sm">
-              <MaterialIcons name="play-arrow" size={28} color="#1f2937" />
-              <Text className="font-bold text-lg text-gray-900">
-                Start Exercise
-              </Text>
-            </HStack>
-          </RNPressable>
+          <VStack space="md">
+            <RNPressable
+              onPress={handleStart}
+              className="w-full bg-primary-500 py-4 rounded-2xl active:opacity-90"
+            >
+              <HStack className="justify-center items-center" space="sm">
+                <MaterialIcons name="play-arrow" size={28} color="#1f2937" />
+                <Text className="font-bold text-lg text-gray-900">
+                  Start Exercise
+                </Text>
+              </HStack>
+            </RNPressable>
+          </VStack>
         ) : (
           <VStack space="md">
             <HStack space="md" className="w-full">
@@ -463,6 +485,31 @@ export default function WorkoutSessionScreen() {
                     }`}
                   >
                     {session.isPaused ? "Resume" : "Pause"}
+                  </Text>
+                </HStack>
+              </RNPressable>
+
+              <RNPressable
+                onPress={handleOpenTutorial}
+                disabled={!currentExercise?.tutorial_url}
+                className={`flex-1 py-4 rounded-2xl active:opacity-90 ${
+                  currentExercise?.tutorial_url
+                    ? "bg-blue-500/20 border border-blue-500"
+                    : "bg-gray-800 border border-gray-700"
+                }`}
+              >
+                <HStack className="justify-center items-center" space="sm">
+                  <MaterialIcons
+                    name="ondemand-video"
+                    size={24}
+                    color={currentExercise?.tutorial_url ? "#60a5fa" : "#6b7280"}
+                  />
+                  <Text
+                    className={`font-bold ${
+                      currentExercise?.tutorial_url ? "text-blue-400" : "text-gray-500"
+                    }`}
+                  >
+                    Tutorial
                   </Text>
                 </HStack>
               </RNPressable>

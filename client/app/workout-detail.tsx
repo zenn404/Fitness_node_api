@@ -19,33 +19,60 @@ import { api, Workout } from "@/services/api";
 
 export default function WorkoutDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const [workout, setWorkout] = useState<Workout | undefined>(undefined);
+  const params = useLocalSearchParams<{ id: string; workout?: string }>();
+  const { id, workout: workoutParam } = params;
+  const initialWorkout = workoutParam
+    ? (() => {
+        try {
+          return JSON.parse(workoutParam) as Workout;
+        } catch {
+          return undefined;
+        }
+      })()
+    : undefined;
+
+  const [workout, setWorkout] = useState<Workout | undefined>(initialWorkout);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [softError, setSoftError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
       fetchWorkoutDetails();
+    } else {
+      setIsLoading(false);
+      if (!initialWorkout) setError("Workout not found");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchWorkoutDetails = async () => {
+    if (!id) return;
     setIsLoading(true);
     setError(null);
+    setSoftError(null);
+    if (initialWorkout) setWorkout(initialWorkout);
 
     try {
-      const response = await api.getWorkout(id as string);
+      const response = await api.getWorkout(id);
 
       if (response.success && response.data) {
         setWorkout(response.data.workout);
       } else {
-        setError(response.message || "Failed to load workout details");
+        if (initialWorkout) {
+          setWorkout(initialWorkout);
+          setSoftError("Could not load exercises. Tap Try Again to retry.");
+        } else {
+          setError(response.message || "Failed to load workout details");
+        }
       }
     } catch (err) {
-      setError("Network error. Please try again.");
+      if (initialWorkout) {
+        setWorkout(initialWorkout);
+        setSoftError("Could not load full details. Tap Try Again to retry.");
+      } else {
+        setError("Network error. Please try again.");
+      }
       console.error("Fetch workout details error:", err);
     } finally {
       setIsLoading(false);
@@ -92,8 +119,8 @@ export default function WorkoutDetailScreen() {
           </Box>
         )}
 
-        {/* Error State */}
-        {error && !isLoading && (
+        {/* Error State - no workout to show */}
+        {error && !isLoading && !workout && (
           <Box className="mx-4 mt-6 bg-red-900/30 p-4 border border-red-500 rounded-xl">
             <Text className="text-red-400 text-center mb-3">{error}</Text>
             <Pressable
@@ -106,7 +133,7 @@ export default function WorkoutDetailScreen() {
         )}
 
         {/* Workout Content */}
-        {!isLoading && !error && workout && (
+        {!isLoading && workout && (
           <VStack className="px-4 mt-4" space="lg">
             {/* Workout Header Card */}
             <Box className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 border border-gray-700 rounded-3xl">

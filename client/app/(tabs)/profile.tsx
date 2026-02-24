@@ -141,10 +141,13 @@ export default function ProfileScreen() {
             onPress={() => setShowEditSheet(true)}
           />
           <MenuItem
-            icon="notifications"
-            title={t("profile.notifications")}
+            icon="emoji-events"
+            title={t("profile.achievement")}
             onPress={() =>
-              Alert.alert(t("common.comingSoon"), t("common.comingSoonMessage"))
+              Alert.alert(
+                t("profile.achievement"),
+                "Bronze: >5 workouts\nSilver: >10 workouts\nGold: >15 workouts"
+              )
             }
           />
           <MenuItem

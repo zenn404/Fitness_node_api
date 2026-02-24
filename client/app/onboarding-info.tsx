@@ -20,28 +20,30 @@ export default function OnboardingInfoScreen() {
   const { t } = useTranslation();
 
   const [age, setAge] = useState("");
-  const [weight] = useState<number>(60);
-  const [height] = useState<number>(170);
+  const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState("");
 
   const handleContinue = () => {
-    if (!age || !weight || !height) {
+    if (!age.trim() || !weight.trim() || !height.trim()) {
       Alert.alert(t("common.error"), t("onboarding.fillAllFields"));
       return;
     }
 
     const parsedAge = parseInt(age, 10);
+    const parsedWeight = parseFloat(weight);
+    const parsedHeight = parseFloat(height);
 
     if (isNaN(parsedAge) || parsedAge < 10 || parsedAge > 120) {
       Alert.alert(t("common.error"), t("onboarding.invalidAge"));
       return;
     }
 
-    if (weight < 20 || weight > 300) {
+    if (isNaN(parsedWeight) || parsedWeight < 20 || parsedWeight > 300) {
       Alert.alert(t("common.error"), t("onboarding.invalidWeight"));
       return;
     }
 
-    if (height < 50 || height > 300) {
+    if (isNaN(parsedHeight) || parsedHeight < 50 || parsedHeight > 300) {
       Alert.alert(t("common.error"), t("onboarding.invalidHeight"));
       return;
     }
@@ -50,8 +52,8 @@ export default function OnboardingInfoScreen() {
       pathname: "/onboarding-goals",
       params: {
         age: parsedAge,
-        weight,
-        height,
+        weight: parsedWeight,
+        height: parsedHeight,
       },
     });
   };
@@ -88,6 +90,30 @@ export default function OnboardingInfoScreen() {
                   value={age}
                   onChangeText={setAge}
                   keyboardType="number-pad"
+                />
+              </Input>
+            </VStack>
+
+            <VStack space="xs">
+              <Text className="text-gray-400">{t("onboarding.weight")} (kg)</Text>
+              <Input size="xl">
+                <InputField
+                  placeholder={t("onboarding.enterWeight")}
+                  value={weight}
+                  onChangeText={setWeight}
+                  keyboardType="decimal-pad"
+                />
+              </Input>
+            </VStack>
+
+            <VStack space="xs">
+              <Text className="text-gray-400">{t("onboarding.height")} (cm)</Text>
+              <Input size="xl">
+                <InputField
+                  placeholder={t("onboarding.enterHeight")}
+                  value={height}
+                  onChangeText={setHeight}
+                  keyboardType="decimal-pad"
                 />
               </Input>
             </VStack>

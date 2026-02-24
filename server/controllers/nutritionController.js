@@ -17,6 +17,73 @@ const toNumber = (value, field, required = false) => {
   return parsed;
 };
 
+const parseNumber = (value) => {
+  if (value === undefined || value === null) return NaN;
+  if (typeof value === "number") return value;
+  if (typeof value !== "string") return NaN;
+  const normalized = value.replace(",", ".").trim();
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : NaN;
+};
+
+const parseServingSizeGrams = (servingSize) => {
+  if (!servingSize || typeof servingSize !== "string") return 100;
+  const match = servingSize.match(/([\d.,]+)\s*g/i);
+  if (!match) return 100;
+  const grams = parseNumber(match[1]);
+  return Number.isFinite(grams) && grams > 0 ? grams : 100;
+};
+
+const nutrientPerServing = (nutriments, servingSizeGrams, servingKey, per100gKey) => {
+  const fromServing = parseNumber(nutriments?.[servingKey]);
+  if (Number.isFinite(fromServing)) {
+    return fromServing;
+  }
+
+  const from100g = parseNumber(nutriments?.[per100gKey]);
+  if (!Number.isFinite(from100g)) {
+    return 0;
+  }
+
+  return (from100g * servingSizeGrams) / 100;
+};
+
+const toNutritionItem = (product) => {
+  const nutriments = product?.nutriments || {};
+  const servingSizeGrams = parseServingSizeGrams(product?.serving_size);
+  const name =
+    product?.product_name_en ||
+    product?.product_name ||
+    product?.generic_name ||
+    "Unknown food";
+
+  return {
+    name,
+    calories: nutrientPerServing(
+      nutriments,
+      servingSizeGrams,
+      "energy-kcal_serving",
+      "energy-kcal_100g"
+    ),
+    serving_size_g: servingSizeGrams,
+    protein_g: nutrientPerServing(
+      nutriments,
+      servingSizeGrams,
+      "proteins_serving",
+      "proteins_100g"
+    ),
+    carbohydrates_total_g: nutrientPerServing(
+      nutriments,
+      servingSizeGrams,
+      "carbohydrates_serving",
+      "carbohydrates_100g"
+    ),
+    fat_total_g: nutrientPerServing(nutriments, servingSizeGrams, "fat_serving", "fat_100g"),
+    sugar_g: nutrientPerServing(nutriments, servingSizeGrams, "sugars_serving", "sugars_100g"),
+    fiber_g: nutrientPerServing(nutriments, servingSizeGrams, "fiber_serving", "fiber_100g"),
+  };
+};
+
 const getNutrition = async (req, res) => {
   try {
     const query = req.query.query;
@@ -28,39 +95,45 @@ const getNutrition = async (req, res) => {
       });
     }
 
-    const apiKey = process.env.CALORIE_NINJAS_KEY;
-    if (!apiKey) {
+    if (typeof fetch !== "function") {
       return res.status(500).json({
         success: false,
-        message: "CalorieNinjas API key not configured",
+        message:
+          "Server runtime does not support fetch. Use Node.js 18+ or add a fetch polyfill.",
       });
     }
 
-    const url = `https://api.calorieninjas.com/v1/nutrition?query=${encodeURIComponent(
-      query
-    )}`;
+    const url =
+      `https://world.openfoodfacts.org/cgi/search.pl` +
+      `?search_terms=${encodeURIComponent(query)}` +
+      `&search_simple=1&action=process&json=1&page_size=15` +
+      `&fields=product_name,product_name_en,generic_name,serving_size,nutriments`;
 
-    const response = await fetch(url, {
-      headers: {
-        "X-Api-Key": apiKey,
-      },
-    });
+    const response = await fetch(url);
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
-      console.error("CalorieNinjas error:", response.status, text);
+      console.error("OpenFoodFacts error:", response.status, text);
+
       return res.status(500).json({
         success: false,
-        message: "Error fetching nutrition data",
+        message: "Error fetching nutrition data from OpenFoodFacts",
+        details: text ? text.slice(0, 240) : undefined,
       });
     }
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+    const products = Array.isArray(data?.products) ? data.products : [];
+
+    const items = products
+      .map(toNutritionItem)
+      .filter((item) => item.name && Number.isFinite(item.calories))
+      .slice(0, 10);
 
     res.json({
       success: true,
       data: {
-        items: Array.isArray(data.items) ? data.items : [],
+        items,
       },
     });
   } catch (error) {

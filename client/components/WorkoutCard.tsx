@@ -17,8 +17,11 @@ interface WorkoutCardProps {
 export function WorkoutCard({ workout }: WorkoutCardProps) {
   const router = useRouter();
 
-  const handleStartWorkout = () => {
-    router.push(`/workout-detail?id=${workout.id}`);
+  const handlePress = () => {
+    router.push({
+      pathname: "/workout-detail",
+      params: { id: workout.id, workout: JSON.stringify(workout) },
+    });
   };
 
   return (
@@ -62,7 +65,7 @@ export function WorkoutCard({ workout }: WorkoutCardProps) {
 
         {/* Start Button */}
         <RNPressable
-          onPress={handleStartWorkout}
+          onPress={handlePress}
           className="bg-primary-500 px-5 py-2 rounded-full active:opacity-80"
         >
           <Text className="font-bold text-gray-900">Start</Text>

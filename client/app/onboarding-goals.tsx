@@ -34,6 +34,7 @@ export default function OnboardingGoalsScreen() {
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
 
   const handleGetStarted = async () => {
+   
     if (!selectedGoal) {
       Alert.alert(t("common.error"), t("onboarding.selectGoal"));
       return;
@@ -45,7 +46,7 @@ export default function OnboardingGoalsScreen() {
       height: parseFloat(height),
       goals: selectedGoal,
     });
-
+   
     if (success) {
       router.replace("/(tabs)");
     }

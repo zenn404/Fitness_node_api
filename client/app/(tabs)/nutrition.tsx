@@ -57,7 +57,11 @@ const buildLogPayload = (
   log_date: logDate,
 });
 
-function NativeBarChart({ data }: { data: { label: string; value: number }[] }) {
+function NativeBarChart({
+  data,
+}: {
+  data: { label: string; value: number; color: string }[];
+}) {
   const chartWidth = screenWidth - 64;
   const maxValue = Math.max(...data.map((d) => d.value), 1);
   const barWidth = (chartWidth - data.length * 12) / data.length;
@@ -68,6 +72,9 @@ function NativeBarChart({ data }: { data: { label: string; value: number }[] }) 
         const barHeight = (item.value / maxValue) * (CHART_HEIGHT - 20);
         const x = index * (barWidth + 12) + 6;
         const y = CHART_HEIGHT - 20 - barHeight;
+        const shouldPlaceLabelInside = y <= 14;
+        const valueY = shouldPlaceLabelInside ? y + 14 : y - 6;
+        const valueColor = shouldPlaceLabelInside ? "#0f172a" : "#f3f4f6";
 
         return (
           <React.Fragment key={item.label}>
@@ -87,14 +94,14 @@ function NativeBarChart({ data }: { data: { label: string; value: number }[] }) 
               height={barHeight}
               rx={BAR_RADIUS}
               ry={BAR_RADIUS}
-              fill="#C0EB6A"
+              fill={item.color}
             />
             <SvgText
               x={x + barWidth / 2}
-              y={y - 6}
+              y={valueY}
               fontSize={11}
               fontWeight="bold"
-              fill="#C0EB6A"
+              fill={valueColor}
               textAnchor="middle"
             >
               {Math.round(item.value)}
@@ -115,7 +122,11 @@ function NativeBarChart({ data }: { data: { label: string; value: number }[] }) 
   );
 }
 
-function TotalsChart({ data }: { data: { label: string; value: number }[] }) {
+function TotalsChart({
+  data,
+}: {
+  data: { label: string; value: number; color: string }[];
+}) {
   if (Platform.OS === "web") {
     try {
       const recharts = require("recharts");
@@ -127,6 +138,7 @@ function TotalsChart({ data }: { data: { label: string; value: number }[] }) {
         Tooltip,
         ResponsiveContainer,
         CartesianGrid,
+        Cell,
       } = recharts;
 
       return (
@@ -143,7 +155,11 @@ function TotalsChart({ data }: { data: { label: string; value: number }[] }) {
                   color: "#f9fafb",
                 }}
               />
-              <Bar dataKey="value" fill="#C0EB6A" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                {data.map((entry, index) => (
+                  <Cell key={`${entry.label}-${index}`} fill={entry.color} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </Box>
@@ -202,7 +218,11 @@ export default function NutritionScreen() {
         setResults(response.data.items || []);
       } else {
         setResults([]);
-        setErrorMessage(response.message || "No results found");
+        setErrorMessage(
+          response.details
+            ? `${response.message || "No results found"}: ${response.details}`
+            : response.message || "No results found"
+        );
       }
     } catch (error) {
       console.error("Nutrition search error:", error);
@@ -270,10 +290,10 @@ export default function NutritionScreen() {
 
   const chartData = useMemo(
     () => [
-      { label: "Calories", value: totals.calories },
-      { label: "Protein", value: totals.protein },
-      { label: "Carbs", value: totals.carbs },
-      { label: "Fat", value: totals.fat },
+      { label: "Calories", value: totals.calories, color: "#f59e0b" },
+      { label: "Protein", value: totals.protein, color: "#38bdf8" },
+      { label: "Carbs", value: totals.carbs, color: "#34d399" },
+      { label: "Fat", value: totals.fat, color: "#f472b6" },
     ],
     [totals]
   );

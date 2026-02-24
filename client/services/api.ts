@@ -4,6 +4,7 @@ interface ApiResponse<T = any> {
   success: boolean;
   message: string;
   data?: T;
+  details?: string;
 }
 
 interface RequestOptions {
@@ -40,13 +41,30 @@ class ApiService {
         body: body ? JSON.stringify(body) : undefined,
       });
 
-      const data = await response.json();
-      return data;
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        if (!response.ok) {
+          return {
+            success: false,
+            message: `Request failed (${response.status})`,
+            details: text?.slice(0, 240),
+          };
+        }
+
+        return {
+          success: false,
+          message: "Unexpected non-JSON response from server.",
+          details: text?.slice(0, 240),
+        };
+      }
     } catch (error) {
       console.error("API request error:", error);
       return {
         success: false,
-        message: "Network error. Please try again.",
+        message: "Network error. Check API URL/device network and try again.",
+        details: `${this.baseUrl}${endpoint}`,
       };
     }
   }
@@ -234,6 +252,7 @@ export interface Exercise {
   order_index: number;
   notes?: string;
   image_url?: string;
+  tutorial_url?: string;
   created_at: string;
 }
 
