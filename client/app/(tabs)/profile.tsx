@@ -1,6 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -26,6 +27,15 @@ import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import { changeLanguage } from "@/lib/i18n";
+import {
+  CalorieMode,
+  FavoriteWorkout,
+  ProfilePrefs,
+  getProfilePrefs,
+  saveProfilePrefs,
+  toggleFavoriteWorkout,
+} from "@/lib/profile-prefs";
+import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
 
 const GOALS = [
@@ -37,10 +47,70 @@ const GOALS = [
   { id: "general_health", icon: "🍏", labelKey: "onboarding.goalHealth" },
 ];
 
+const CALORIE_MODES: CalorieMode[] = ["maintenance", "cut", "bulk"];
+
+const getCalorieModeKey = (mode: CalorieMode) => `profile.calorieMode.${mode}`;
+
+const getAchievementTier = (workouts: number) => {
+  if (workouts >= 15) {
+    return { labelKey: "home.goldMedal", icon: "🥇", color: "#facc15" };
+  }
+  if (workouts >= 10) {
+    return { labelKey: "home.silverMedal", icon: "🥈", color: "#d1d5db" };
+  }
+  if (workouts >= 5) {
+    return { labelKey: "home.bronzeMedal", icon: "🥉", color: "#d97706" };
+  }
+  return { labelKey: "home.noMedalYet", icon: "🏅", color: "#6b7280" };
+};
+
 export default function ProfileScreen() {
-  const { user, logout, isLoading } = useAuthStore();
+  const { user, token, logout, isLoading, changePassword, deleteAccount } = useAuthStore();
   const { t, i18n } = useTranslation();
   const [showEditSheet, setShowEditSheet] = useState(false);
+  const [showAchievementSheet, setShowAchievementSheet] = useState(false);
+  const [showCalorieSheet, setShowCalorieSheet] = useState(false);
+  const [showFavoritesSheet, setShowFavoritesSheet] = useState(false);
+  const [showAccountSheet, setShowAccountSheet] = useState(false);
+  const [totalWorkouts, setTotalWorkouts] = useState(0);
+
+  const [prefs, setPrefs] = useState<ProfilePrefs>({
+    calorieMode: "maintenance",
+    calorieTarget: undefined,
+    favoriteWorkouts: [],
+  });
+
+  const [calorieModeDraft, setCalorieModeDraft] = useState<CalorieMode>("maintenance");
+  const [calorieTargetDraft, setCalorieTargetDraft] = useState("");
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const loadPrefs = useCallback(async () => {
+    const stored = await getProfilePrefs();
+    setPrefs(stored);
+  }, []);
+
+  const loadProgress = useCallback(async () => {
+    if (!token) return;
+    const response = await api.getProgressData(token);
+    if (response.success && response.data) {
+      setTotalWorkouts(response.data.totalStats.workouts || 0);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadPrefs();
+    loadProgress();
+  }, [loadPrefs, loadProgress]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadPrefs();
+      loadProgress();
+    }, [loadPrefs, loadProgress]),
+  );
 
   const handleLogout = () => {
     Alert.alert(t("profile.logout"), t("profile.logoutConfirm"), [
@@ -70,10 +140,109 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const handleOpenCalorie = () => {
+    setCalorieModeDraft(prefs.calorieMode);
+    setCalorieTargetDraft(
+      typeof prefs.calorieTarget === "number" ? String(prefs.calorieTarget) : "",
+    );
+    setShowCalorieSheet(true);
+  };
+
+  const handleSaveCalorie = async () => {
+    let calorieTarget: number | undefined;
+
+    if (calorieTargetDraft.trim()) {
+      const parsed = parseInt(calorieTargetDraft, 10);
+      if (isNaN(parsed) || parsed < 800 || parsed > 6000) {
+        Alert.alert(t("common.error"), t("profile.calorieTargetInvalid"));
+        return;
+      }
+      calorieTarget = parsed;
+    }
+
+    const next: ProfilePrefs = {
+      ...prefs,
+      calorieMode: calorieModeDraft,
+      calorieTarget,
+    };
+    await saveProfilePrefs(next);
+    setPrefs(next);
+    setShowCalorieSheet(false);
+  };
+
+  const calorieSubtitle = useMemo(() => {
+    const modeLabel = t(getCalorieModeKey(prefs.calorieMode));
+    if (typeof prefs.calorieTarget === "number") {
+      return `${modeLabel} • ${prefs.calorieTarget} ${t("common.kcal")}`;
+    }
+    return `${modeLabel} • ${t("profile.notSet")}`;
+  }, [prefs.calorieMode, prefs.calorieTarget, t]);
+
+  const handleRemoveFavorite = async (fav: FavoriteWorkout) => {
+    const next = await toggleFavoriteWorkout(fav);
+    setPrefs(next);
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert(t("common.error"), t("auth.fillAllFields"));
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert(t("common.error"), t("auth.passwordsNotMatch"));
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert(t("common.error"), t("auth.passwordMinLength"));
+      return;
+    }
+
+    const success = await changePassword(currentPassword, newPassword);
+    if (success) {
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      Alert.alert(t("profile.changePassword"), t("profile.passwordChanged"));
+    } else {
+      Alert.alert(t("common.error"), t("profile.changePasswordFailed"));
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(t("profile.deleteAccount"), t("profile.deleteAccountConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("profile.deleteAccount"),
+        style: "destructive",
+        onPress: async () => {
+          const success = await deleteAccount();
+          if (success) {
+            router.replace("/(auth)/login");
+          } else {
+            Alert.alert(t("common.error"), t("profile.deleteAccountFailed"));
+          }
+        },
+      },
+    ]);
+  };
+
   const currentLanguageLabel =
     i18n.language === "th" ? t("profile.thai") : t("profile.english");
 
   const goalLabel = GOALS.find((g) => g.id === user?.goals)?.labelKey || "";
+  const currentTier = getAchievementTier(totalWorkouts);
+  const nextMilestone =
+    totalWorkouts < 5 ? 5 : totalWorkouts < 10 ? 10 : totalWorkouts < 15 ? 15 : null;
+  const progressPercent =
+    totalWorkouts < 5
+      ? (totalWorkouts / 5) * 100
+      : totalWorkouts < 10
+        ? ((totalWorkouts - 5) / 5) * 100
+        : totalWorkouts < 15
+          ? ((totalWorkouts - 10) / 5) * 100
+          : 100;
 
   return (
     <SafeAreaView className="flex-1">
@@ -85,7 +254,6 @@ export default function ProfileScreen() {
           {t("profile.title")}
         </Heading>
 
-        {/* User Avatar and Info */}
         <VStack className="items-center mb-8">
           <Box className="justify-center items-center bg-primary-500 mb-4 rounded-full w-24 h-24">
             <Text className="font-bold text-gray-900 text-4xl">
@@ -133,7 +301,6 @@ export default function ProfileScreen() {
           )}
         </VStack>
 
-        {/* Menu Items */}
         <VStack space="sm" className="mb-8">
           <MenuItem
             icon="person"
@@ -143,12 +310,25 @@ export default function ProfileScreen() {
           <MenuItem
             icon="emoji-events"
             title={t("profile.achievement")}
-            onPress={() =>
-              Alert.alert(
-                t("profile.achievement"),
-                "Bronze: >5 workouts\nSilver: >10 workouts\nGold: >15 workouts"
-              )
-            }
+            subtitle={t(currentTier.labelKey)}
+            onPress={() => setShowAchievementSheet(true)}
+          />
+          <MenuItem
+            icon="local-fire-department"
+            title={t("profile.calorieTarget")}
+            subtitle={calorieSubtitle}
+            onPress={handleOpenCalorie}
+          />
+          <MenuItem
+            icon="favorite"
+            title={t("profile.favoriteWorkouts")}
+            subtitle={t("profile.favoriteCount", { count: prefs.favoriteWorkouts.length })}
+            onPress={() => setShowFavoritesSheet(true)}
+          />
+          <MenuItem
+            icon="lock"
+            title={t("profile.privacyAccount")}
+            onPress={() => setShowAccountSheet(true)}
           />
           <MenuItem
             icon="language"
@@ -158,7 +338,6 @@ export default function ProfileScreen() {
           />
         </VStack>
 
-        {/* Logout Button */}
         <Button
           size="lg"
           className="bg-red-500 rounded-xl"
@@ -172,11 +351,247 @@ export default function ProfileScreen() {
         </Button>
       </ScrollView>
 
-      {/* Edit Profile ActionSheet */}
       <EditProfileSheet
         isOpen={showEditSheet}
         onClose={() => setShowEditSheet(false)}
       />
+
+      <Actionsheet
+        isOpen={showAchievementSheet}
+        onClose={() => setShowAchievementSheet(false)}
+      >
+        <ActionsheetBackdrop className="bg-black/60" />
+        <ActionsheetContent className="border-t border-gray-800 max-h-[80%]">
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator className="bg-gray-600" />
+          </ActionsheetDragIndicatorWrapper>
+
+          <VStack className="w-full" space="md">
+            <Heading size="md">{t("profile.achievement")}</Heading>
+
+            <Box className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+              <HStack className="items-center justify-between">
+                <VStack>
+                  <Text className="text-gray-400 text-xs">{t("profile.currentBadge")}</Text>
+                  <Text className="font-semibold" style={{ color: currentTier.color }}>
+                    {t(currentTier.labelKey)}
+                  </Text>
+                  <Text className="text-gray-400 text-xs mt-1">
+                    {t("profile.totalWorkoutsCount", { count: totalWorkouts })}
+                  </Text>
+                </VStack>
+                <Text className="text-4xl">{currentTier.icon}</Text>
+              </HStack>
+            </Box>
+
+            {nextMilestone ? (
+              <Box className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+                <Text className="text-gray-400 text-xs mb-2">{t("profile.progressToNext")}</Text>
+                <Box className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <Box
+                    className="h-full bg-primary-500 rounded-full"
+                    style={{ width: `${Math.max(0, Math.min(100, progressPercent))}%` }}
+                  />
+                </Box>
+                <Text className="text-gray-400 text-xs mt-2">
+                  {t("profile.nextMilestone", { count: nextMilestone })}
+                </Text>
+              </Box>
+            ) : (
+              <Box className="bg-gray-900 border border-primary-500/40 rounded-2xl p-4">
+                <Text className="text-primary-500 font-semibold text-center">
+                  {t("profile.topTierUnlocked")}
+                </Text>
+              </Box>
+            )}
+
+            <VStack space="sm">
+              <AchievementRule icon="🏅" label={t("home.noMedalYet")} rule={t("profile.ruleNoMedal")} />
+              <AchievementRule icon="🥉" label={t("home.bronzeMedal")} rule={t("profile.ruleBronze")} />
+              <AchievementRule icon="🥈" label={t("home.silverMedal")} rule={t("profile.ruleSilver")} />
+              <AchievementRule icon="🥇" label={t("home.goldMedal")} rule={t("profile.ruleGold")} />
+            </VStack>
+          </VStack>
+        </ActionsheetContent>
+      </Actionsheet>
+
+      <Actionsheet isOpen={showCalorieSheet} onClose={() => setShowCalorieSheet(false)}>
+        <ActionsheetBackdrop className="bg-black/60" />
+        <ActionsheetContent className="border-t border-gray-800">
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator className="bg-gray-600" />
+          </ActionsheetDragIndicatorWrapper>
+
+          <VStack className="w-full" space="md">
+            <Heading size="md">{t("profile.calorieTarget")}</Heading>
+            <Text className="text-gray-400 text-sm">{t("profile.calorieTargetHelp")}</Text>
+
+            <VStack space="sm">
+              {CALORIE_MODES.map((mode) => {
+                const active = calorieModeDraft === mode;
+                return (
+                  <Pressable key={mode} onPress={() => setCalorieModeDraft(mode)}>
+                    <HStack
+                      className={`justify-between items-center rounded-xl p-3 border ${
+                        active ? "border-primary-500 bg-primary-500/10" : "border-gray-800 bg-gray-900"
+                      }`}
+                    >
+                      <Text className={active ? "text-primary-500 font-semibold" : "text-white"}>
+                        {t(getCalorieModeKey(mode))}
+                      </Text>
+                      {active && <MaterialIcons name="check" size={20} color="#C0EB6A" />}
+                    </HStack>
+                  </Pressable>
+                );
+              })}
+            </VStack>
+
+            <VStack space="xs">
+              <Text className="text-gray-400">{t("profile.dailyCalorieTarget")}</Text>
+              <Input size="xl">
+                <InputField
+                  placeholder={t("profile.dailyCaloriePlaceholder")}
+                  value={calorieTargetDraft}
+                  onChangeText={setCalorieTargetDraft}
+                  keyboardType="number-pad"
+                />
+              </Input>
+            </VStack>
+
+            <HStack space="sm">
+              <Button
+                variant="outline"
+                className="flex-1 border-gray-700"
+                onPress={() => setShowCalorieSheet(false)}
+              >
+                <ButtonText>{t("common.cancel")}</ButtonText>
+              </Button>
+              <Button className="flex-1" onPress={handleSaveCalorie}>
+                <ButtonText>{t("profile.save")}</ButtonText>
+              </Button>
+            </HStack>
+          </VStack>
+        </ActionsheetContent>
+      </Actionsheet>
+
+      <Actionsheet isOpen={showFavoritesSheet} onClose={() => setShowFavoritesSheet(false)}>
+        <ActionsheetBackdrop className="bg-black/60" />
+        <ActionsheetContent className="border-t border-gray-800 max-h-[85%]">
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator className="bg-gray-600" />
+          </ActionsheetDragIndicatorWrapper>
+
+          <VStack className="w-full" space="md">
+            <Heading size="md">{t("profile.favoriteWorkouts")}</Heading>
+
+            {prefs.favoriteWorkouts.length === 0 ? (
+              <Text className="text-gray-400">{t("profile.noFavoriteWorkouts")}</Text>
+            ) : (
+              <ScrollView className="w-full" contentContainerStyle={{ paddingBottom: 24 }}>
+                <VStack space="sm" className="w-full">
+                  {prefs.favoriteWorkouts.map((fav) => (
+                    <HStack
+                      key={fav.id}
+                      className="items-center justify-between bg-gray-900 border border-gray-800 rounded-xl p-3"
+                    >
+                      <Pressable
+                        className="flex-1"
+                        onPress={() => {
+                          setShowFavoritesSheet(false);
+                          router.push({
+                            pathname: "/workout-detail",
+                            params: { id: fav.id },
+                          });
+                        }}
+                      >
+                        <Text className="font-semibold">{fav.name}</Text>
+                        <Text className="text-gray-400 text-xs">
+                          {fav.difficulty}
+                          {typeof fav.duration_minutes === "number"
+                            ? ` • ${fav.duration_minutes} ${t("common.min")}`
+                            : ""}
+                        </Text>
+                      </Pressable>
+                      <Pressable onPress={() => handleRemoveFavorite(fav)}>
+                        <MaterialIcons name="delete-outline" size={22} color="#f87171" />
+                      </Pressable>
+                    </HStack>
+                  ))}
+                </VStack>
+              </ScrollView>
+            )}
+          </VStack>
+        </ActionsheetContent>
+      </Actionsheet>
+
+      <Actionsheet isOpen={showAccountSheet} onClose={() => setShowAccountSheet(false)}>
+        <ActionsheetBackdrop className="bg-black/60" />
+        <ActionsheetContent className="border-t border-gray-800 max-h-[90%]">
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator className="bg-gray-600" />
+          </ActionsheetDragIndicatorWrapper>
+
+          <ScrollView className="w-full" contentContainerStyle={{ paddingBottom: 28 }}>
+            <VStack className="w-full" space="md">
+              <Heading size="md">{t("profile.privacyAccount")}</Heading>
+
+              <VStack space="xs">
+                <Text className="text-gray-400">{t("profile.currentPassword")}</Text>
+                <Input size="xl">
+                  <InputField
+                    value={currentPassword}
+                    onChangeText={setCurrentPassword}
+                    placeholder={t("profile.currentPassword")}
+                    secureTextEntry
+                    autoCapitalize="none"
+                  />
+                </Input>
+              </VStack>
+
+              <VStack space="xs">
+                <Text className="text-gray-400">{t("profile.newPassword")}</Text>
+                <Input size="xl">
+                  <InputField
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    placeholder={t("profile.newPassword")}
+                    secureTextEntry
+                    autoCapitalize="none"
+                  />
+                </Input>
+              </VStack>
+
+              <VStack space="xs">
+                <Text className="text-gray-400">{t("profile.confirmNewPassword")}</Text>
+                <Input size="xl">
+                  <InputField
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder={t("profile.confirmNewPassword")}
+                    secureTextEntry
+                    autoCapitalize="none"
+                  />
+                </Input>
+              </VStack>
+
+              <Button onPress={handleChangePassword} disabled={isLoading}>
+                {isLoading ? <ButtonSpinner color="white" /> : <ButtonText>{t("profile.changePassword")}</ButtonText>}
+              </Button>
+
+              <Box className="border-t border-gray-800 pt-4">
+                <Text className="text-gray-400 text-xs mb-2">{t("profile.deleteAccountWarning")}</Text>
+                <Button
+                  className="bg-red-500"
+                  onPress={handleDeleteAccount}
+                  disabled={isLoading}
+                >
+                  <ButtonText>{t("profile.deleteAccount")}</ButtonText>
+                </Button>
+              </Box>
+            </VStack>
+          </ScrollView>
+        </ActionsheetContent>
+      </Actionsheet>
     </SafeAreaView>
   );
 }
@@ -261,7 +676,6 @@ function EditProfileSheet({
           <ActionsheetDragIndicator className="bg-gray-600" />
         </ActionsheetDragIndicatorWrapper>
 
-        {/* Header */}
         <HStack className="justify-between items-center w-full px-1 mb-4">
           <Pressable onPress={onClose}>
             <Text className="text-gray-400">{t("common.cancel")}</Text>
@@ -289,7 +703,6 @@ function EditProfileSheet({
             nestedScrollEnabled
           >
             <VStack space="lg" className="w-full">
-              {/* Name */}
               <VStack space="xs">
                 <Text className="text-gray-400">{t("auth.fullName")}</Text>
                 <Input size="xl">
@@ -302,7 +715,6 @@ function EditProfileSheet({
                 </Input>
               </VStack>
 
-              {/* Age */}
               <VStack space="xs">
                 <Text className="text-gray-400">{t("onboarding.age")}</Text>
                 <Input size="xl">
@@ -315,7 +727,6 @@ function EditProfileSheet({
                 </Input>
               </VStack>
 
-              {/* Height */}
               <VStack space="xs">
                 <Text className="text-gray-400">
                   {t("onboarding.height")} (cm)
@@ -330,7 +741,6 @@ function EditProfileSheet({
                 </Input>
               </VStack>
 
-              {/* Weight */}
               <VStack space="xs">
                 <Text className="text-gray-400">
                   {t("onboarding.weight")} (kg)
@@ -345,7 +755,6 @@ function EditProfileSheet({
                 </Input>
               </VStack>
 
-              {/* Goals */}
               <VStack space="xs">
                 <Text className="text-gray-400">
                   {t("profile.fitnessGoal")}
@@ -417,5 +826,27 @@ function MenuItem({
         <MaterialIcons name="chevron-right" size={22} color="#6b7280" />
       </HStack>
     </Pressable>
+  );
+}
+
+function AchievementRule({
+  icon,
+  label,
+  rule,
+}: {
+  icon: string;
+  label: string;
+  rule: string;
+}) {
+  return (
+    <HStack className="items-center justify-between bg-gray-900 border border-gray-800 rounded-xl p-3">
+      <HStack className="items-center" space="sm">
+        <Text className="text-2xl">{icon}</Text>
+        <VStack>
+          <Text className="font-semibold">{label}</Text>
+          <Text className="text-gray-400 text-xs">{rule}</Text>
+        </VStack>
+      </HStack>
+    </HStack>
   );
 }

@@ -19,6 +19,7 @@ import { VStack } from "@/components/ui/vstack";
 import { getDifficultyColor } from "@/lib/utils";
 import { api, Exercise, Workout } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
+import { useTranslation } from "react-i18next";
 
 type SessionPhase = "exercise" | "rest" | "completed";
 
@@ -32,6 +33,7 @@ interface SessionState {
 }
 
 export default function WorkoutSessionScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { token } = useAuthStore();
   const { workout: workoutParam } = useLocalSearchParams<{ workout: string }>();
@@ -232,20 +234,20 @@ export default function WorkoutSessionScreen() {
   const handleOpenTutorial = async () => {
     const tutorialUrl = currentExercise?.tutorial_url;
     if (!tutorialUrl) {
-      Alert.alert("No tutorial", "No tutorial link is available for this exercise.");
+      Alert.alert(t("session.noTutorial"), t("session.noTutorialMessage"));
       return;
     }
 
     try {
       const supported = await Linking.canOpenURL(tutorialUrl);
       if (!supported) {
-        Alert.alert("Cannot open link", "This tutorial link is not valid.");
+        Alert.alert(t("session.cannotOpenLink"), t("session.invalidTutorialLink"));
         return;
       }
       await Linking.openURL(tutorialUrl);
     } catch (error) {
       console.error("Failed to open tutorial link:", error);
-      Alert.alert("Error", "Failed to open the tutorial link.");
+      Alert.alert(t("common.error"), t("session.failedToOpenTutorial"));
     }
   };
 
@@ -265,13 +267,13 @@ export default function WorkoutSessionScreen() {
       <SafeAreaView className="flex-1 justify-center items-center bg-gray-950">
         <MaterialIcons name="error-outline" size={64} color="#ef4444" />
         <Text className="mt-4 text-gray-400 text-center">
-          No exercises found in this workout
+          {t("session.noExercisesFound")}
         </Text>
         <Pressable
           onPress={() => router.back()}
           className="mt-6 px-6 py-3 bg-gray-800 rounded-lg"
         >
-          <Text className="text-primary-500 font-semibold">Go Back</Text>
+          <Text className="text-primary-500 font-semibold">{t("common.goBack")}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -285,29 +287,29 @@ export default function WorkoutSessionScreen() {
             <MaterialIcons name="emoji-events" size={80} color="#C0EB6A" />
           </Box>
           <Heading size="3xl" className="text-center mb-4">
-            Workout Complete! 🎉
+            {t("session.workoutComplete")}
           </Heading>
           <Text className="text-gray-400 text-center text-lg mb-8">
-            Great job! You&apos;ve completed {workout.name}
+            {t("session.greatJob", { name: workout.name })}
           </Text>
           <VStack
             className="w-full bg-gray-900 p-6 rounded-2xl mb-8"
             space="md"
           >
             <HStack className="justify-between items-center">
-              <Text className="text-gray-400">Exercises</Text>
+              <Text className="text-gray-400">{t("workout.exercises")}</Text>
               <Text className="text-white font-semibold">
                 {exercises.length}
               </Text>
             </HStack>
             <HStack className="justify-between items-center">
-              <Text className="text-gray-400">Total Sets</Text>
+              <Text className="text-gray-400">{t("session.totalSets")}</Text>
               <Text className="text-white font-semibold">
                 {exercises.reduce((acc, ex) => acc + ex.sets, 0)}
               </Text>
             </HStack>
             <HStack className="justify-between items-center">
-              <Text className="text-gray-400">Difficulty</Text>
+              <Text className="text-gray-400">{t("session.difficulty")}</Text>
               <Text
                 className="font-semibold"
                 style={{ color: getDifficultyColor(workout.difficulty) }}
@@ -321,7 +323,7 @@ export default function WorkoutSessionScreen() {
             className="w-full bg-primary-500 py-4 rounded-2xl active:opacity-90"
           >
             <Text className="text-center font-bold text-lg text-gray-900">
-              Finish
+              {t("session.finish")}
             </Text>
           </RNPressable>
         </Box>
@@ -338,7 +340,10 @@ export default function WorkoutSessionScreen() {
           <VStack>
             <Text className="text-gray-400 text-sm">{workout.name}</Text>
             <Text className="text-white font-medium">
-              Exercise {session.currentExerciseIndex + 1} of {exercises.length}
+              {t("session.exerciseOf", {
+                current: session.currentExerciseIndex + 1,
+                total: exercises.length,
+              })}
             </Text>
           </VStack>
         </HStack>
@@ -370,7 +375,7 @@ export default function WorkoutSessionScreen() {
           />
         </Box>
         <Text className="text-gray-500 text-xs mt-1 text-right">
-          {Math.round(calculateProgress())}% complete
+          {Math.round(calculateProgress())}% {t("session.complete")}
         </Text>
       </Box>
 
@@ -386,7 +391,7 @@ export default function WorkoutSessionScreen() {
               session.phase === "rest" ? "text-blue-400" : "text-primary-500"
             }`}
           >
-            {session.phase === "rest" ? "Rest Time" : "Exercise"}
+            {session.phase === "rest" ? t("session.restTime") : t("session.exercise")}
           </Text>
         </Box>
 
@@ -407,7 +412,7 @@ export default function WorkoutSessionScreen() {
               {formatTime(session.timeRemaining)}
             </Text>
             {session.isPaused && (
-              <Text className="text-gray-400 text-sm mt-2">PAUSED</Text>
+              <Text className="text-gray-400 text-sm mt-2">{t("session.paused")}</Text>
             )}
           </Box>
         </Box>
@@ -420,14 +425,17 @@ export default function WorkoutSessionScreen() {
             <HStack className="items-center" space="xs">
               <MaterialIcons name="repeat" size={18} color="#9ca3af" />
               <Text className="text-gray-400">
-                Set {session.currentSet} of {currentExercise?.sets}
+                {t("session.setOf", {
+                  current: session.currentSet,
+                  total: currentExercise?.sets,
+                })}
               </Text>
             </HStack>
             <Text className="text-gray-600">•</Text>
             <HStack className="items-center" space="xs">
               <MaterialIcons name="fitness-center" size={18} color="#9ca3af" />
               <Text className="text-gray-400">
-                {currentExercise?.reps} reps
+                {t("session.reps", { count: currentExercise?.reps || 0 })}
               </Text>
             </HStack>
           </HStack>
@@ -447,7 +455,7 @@ export default function WorkoutSessionScreen() {
               <HStack className="justify-center items-center" space="sm">
                 <MaterialIcons name="play-arrow" size={28} color="#1f2937" />
                 <Text className="font-bold text-lg text-gray-900">
-                  Start Exercise
+                  {t("session.startExercise")}
                 </Text>
               </HStack>
             </RNPressable>
@@ -461,7 +469,7 @@ export default function WorkoutSessionScreen() {
               >
                 <HStack className="justify-center items-center" space="sm">
                   <MaterialIcons name="stop" size={24} color="#ef4444" />
-                  <Text className="font-bold text-red-400">Stop</Text>
+                  <Text className="font-bold text-red-400">{t("session.stop")}</Text>
                 </HStack>
               </RNPressable>
 
@@ -484,7 +492,7 @@ export default function WorkoutSessionScreen() {
                       session.isPaused ? "text-gray-900" : "text-amber-400"
                     }`}
                   >
-                    {session.isPaused ? "Resume" : "Pause"}
+                    {session.isPaused ? t("session.resume") : t("session.pause")}
                   </Text>
                 </HStack>
               </RNPressable>
@@ -509,7 +517,7 @@ export default function WorkoutSessionScreen() {
                       currentExercise?.tutorial_url ? "text-blue-400" : "text-gray-500"
                     }`}
                   >
-                    Tutorial
+                    {t("session.tutorial")}
                   </Text>
                 </HStack>
               </RNPressable>
@@ -522,7 +530,7 @@ export default function WorkoutSessionScreen() {
               <HStack className="justify-center items-center" space="sm">
                 <MaterialIcons name="skip-next" size={24} color="#9ca3af" />
                 <Text className="font-semibold text-gray-400">
-                  Skip {session.phase === "rest" ? "Rest" : "Exercise"}
+                  {session.phase === "rest" ? t("session.skipRest") : t("session.skipExercise")}
                 </Text>
               </HStack>
             </RNPressable>

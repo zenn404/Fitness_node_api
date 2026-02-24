@@ -24,6 +24,7 @@ import {
   DailyLog,
   NutritionItem,
 } from "@/services/api";
+import { useTranslation } from "react-i18next";
 
 const screenWidth = Dimensions.get("window").width;
 const CHART_HEIGHT = 180;
@@ -173,6 +174,7 @@ function TotalsChart({
 }
 
 export default function NutritionScreen() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NutritionItem[]>([]);
   const [logs, setLogs] = useState<DailyLog[]>([]);
@@ -194,11 +196,11 @@ export default function NutritionScreen() {
       if (response.success && response.data) {
         setLogs(response.data.logs || []);
       } else {
-        setErrorMessage(response.message || "Unable to fetch logs");
+        setErrorMessage(response.message || t("nutrition.unableToFetchLogs"));
       }
     } catch (error) {
       console.error("Fetch logs error:", error);
-      setErrorMessage("Unable to fetch logs");
+      setErrorMessage(t("nutrition.unableToFetchLogs"));
     } finally {
       setIsLoadingLogs(false);
     }
@@ -206,7 +208,7 @@ export default function NutritionScreen() {
 
   const handleSearch = async () => {
     if (!query.trim()) {
-      Alert.alert("Missing search", "Enter a food query to search");
+      Alert.alert(t("nutrition.missingSearch"), t("nutrition.enterFoodQuery"));
       return;
     }
 
@@ -220,13 +222,13 @@ export default function NutritionScreen() {
         setResults([]);
         setErrorMessage(
           response.details
-            ? `${response.message || "No results found"}: ${response.details}`
-            : response.message || "No results found"
+            ? `${response.message || t("nutrition.noResultsFound")}: ${response.details}`
+            : response.message || t("nutrition.noResultsFound")
         );
       }
     } catch (error) {
       console.error("Nutrition search error:", error);
-      setErrorMessage("Unable to fetch nutrition data");
+      setErrorMessage(t("nutrition.unableToFetchNutritionData"));
     } finally {
       setIsSearching(false);
     }
@@ -243,11 +245,11 @@ export default function NutritionScreen() {
       if (response.success) {
         await fetchLogs(selectedDate);
       } else {
-        setErrorMessage(response.message || "Unable to add log");
+        setErrorMessage(response.message || t("nutrition.unableToAddLog"));
       }
     } catch (error) {
       console.error("Add log error:", error);
-      setErrorMessage("Unable to add log");
+      setErrorMessage(t("nutrition.unableToAddLog"));
     } finally {
       setActiveAdd(null);
     }
@@ -260,11 +262,11 @@ export default function NutritionScreen() {
       if (response.success) {
         await fetchLogs(selectedDate);
       } else {
-        setErrorMessage(response.message || "Unable to delete log");
+        setErrorMessage(response.message || t("nutrition.unableToDeleteLog"));
       }
     } catch (error) {
       console.error("Delete log error:", error);
-      setErrorMessage("Unable to delete log");
+      setErrorMessage(t("nutrition.unableToDeleteLog"));
     }
   };
 
@@ -290,32 +292,32 @@ export default function NutritionScreen() {
 
   const chartData = useMemo(
     () => [
-      { label: "Calories", value: totals.calories, color: "#f59e0b" },
-      { label: "Protein", value: totals.protein, color: "#38bdf8" },
-      { label: "Carbs", value: totals.carbs, color: "#34d399" },
-      { label: "Fat", value: totals.fat, color: "#f472b6" },
+      { label: t("nutrition.calories"), value: totals.calories, color: "#f59e0b" },
+      { label: t("nutrition.protein"), value: totals.protein, color: "#38bdf8" },
+      { label: t("nutrition.carbs"), value: totals.carbs, color: "#34d399" },
+      { label: t("nutrition.fat"), value: totals.fat, color: "#f472b6" },
     ],
-    [totals]
+    [totals, t]
   );
 
   return (
     <SafeAreaView className="flex-1">
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 120 }}>
         <VStack className="mt-4 mb-6" space="xs">
-          <Heading size="2xl">Nutrition</Heading>
+          <Heading size="2xl">{t("nutrition.title")}</Heading>
           <Text className="text-gray-400">
-            Search foods, track your intake, and review daily totals.
+            {t("nutrition.subtitle")}
           </Text>
         </VStack>
 
         <Box className="bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-6">
           <VStack space="md">
-            <Text className="text-gray-300 text-sm">Search Food</Text>
+            <Text className="text-gray-300 text-sm">{t("nutrition.searchFood")}</Text>
             <HStack space="sm" className="items-center">
               <Box className="flex-1">
                 <Input size="lg">
                   <InputField
-                    placeholder="e.g. 2 eggs and rice"
+                    placeholder={t("nutrition.searchPlaceholder")}
                     value={query}
                     onChangeText={setQuery}
                     autoCapitalize="none"
@@ -326,13 +328,13 @@ export default function NutritionScreen() {
                 {isSearching ? (
                   <ButtonSpinner color="white" />
                 ) : (
-                  <ButtonText>Search</ButtonText>
+                  <ButtonText>{t("nutrition.search")}</ButtonText>
                 )}
               </Button>
             </HStack>
 
             <HStack className="items-center justify-between">
-              <Text className="text-gray-400 text-sm">Log Date</Text>
+              <Text className="text-gray-400 text-sm">{t("nutrition.logDate")}</Text>
               <HStack space="sm" className="items-center">
                 <Pressable
                   className="bg-gray-800 p-2 rounded-full"
@@ -366,8 +368,10 @@ export default function NutritionScreen() {
 
         <Box className="mb-6">
           <HStack className="items-center justify-between mb-3">
-            <Heading size="md">Results</Heading>
-            <Text className="text-gray-400 text-sm">{results.length} items</Text>
+            <Heading size="md">{t("nutrition.results")}</Heading>
+            <Text className="text-gray-400 text-sm">
+              {t("nutrition.itemsCount", { count: results.length })}
+            </Text>
           </HStack>
 
           {isSearching && (
@@ -379,7 +383,7 @@ export default function NutritionScreen() {
           {!isSearching && results.length === 0 && (
             <Box className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
               <Text className="text-gray-400">
-                Search for foods to see nutrition results.
+                {t("nutrition.searchFoodsHint")}
               </Text>
             </Box>
           )}
@@ -399,7 +403,9 @@ export default function NutritionScreen() {
                           {item.name}
                         </Heading>
                         <Text className="text-gray-400 text-xs">
-                          Serving size: {formatNumber(item.serving_size_g, 0)} g
+                          {t("nutrition.servingSizeValue", {
+                            value: formatNumber(item.serving_size_g, 0),
+                          })}
                         </Text>
                       </VStack>
                       <Button
@@ -410,30 +416,30 @@ export default function NutritionScreen() {
                         {activeAdd === key ? (
                           <ButtonSpinner color="white" />
                         ) : (
-                          <ButtonText>Add to Log</ButtonText>
+                          <ButtonText>{t("nutrition.addToLog")}</ButtonText>
                         )}
                       </Button>
                     </HStack>
                     <HStack className="justify-between">
-                      <Text className="text-gray-300 text-xs">Calories</Text>
+                      <Text className="text-gray-300 text-xs">{t("nutrition.calories")}</Text>
                       <Text className="text-gray-200 text-xs">
                         {formatNumber(item.calories, 0)}
                       </Text>
                     </HStack>
                     <HStack className="justify-between">
-                      <Text className="text-gray-300 text-xs">Protein</Text>
+                      <Text className="text-gray-300 text-xs">{t("nutrition.protein")}</Text>
                       <Text className="text-gray-200 text-xs">
                         {formatNumber(item.protein_g)} g
                       </Text>
                     </HStack>
                     <HStack className="justify-between">
-                      <Text className="text-gray-300 text-xs">Carbs</Text>
+                      <Text className="text-gray-300 text-xs">{t("nutrition.carbs")}</Text>
                       <Text className="text-gray-200 text-xs">
                         {formatNumber(item.carbohydrates_total_g)} g
                       </Text>
                     </HStack>
                     <HStack className="justify-between">
-                      <Text className="text-gray-300 text-xs">Fat</Text>
+                      <Text className="text-gray-300 text-xs">{t("nutrition.fat")}</Text>
                       <Text className="text-gray-200 text-xs">
                         {formatNumber(item.fat_total_g)} g
                       </Text>
@@ -447,7 +453,7 @@ export default function NutritionScreen() {
 
         <Box className="mb-6">
           <HStack className="items-center justify-between mb-3">
-            <Heading size="md">Daily Log</Heading>
+            <Heading size="md">{t("nutrition.dailyLog")}</Heading>
             <Text className="text-gray-400 text-sm">{selectedDate}</Text>
           </HStack>
 
@@ -460,7 +466,7 @@ export default function NutritionScreen() {
           {!isLoadingLogs && logs.length === 0 && (
             <Box className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
               <Text className="text-gray-400">
-                No entries yet. Add foods from your search results.
+                {t("nutrition.noEntriesYet")}
               </Text>
             </Box>
           )}
@@ -484,31 +490,31 @@ export default function NutritionScreen() {
                     </Pressable>
                   </HStack>
                   <HStack className="justify-between">
-                    <Text className="text-gray-300 text-xs">Calories</Text>
+                    <Text className="text-gray-300 text-xs">{t("nutrition.calories")}</Text>
                     <Text className="text-gray-200 text-xs">
                       {formatNumber(log.calories, 0)}
                     </Text>
                   </HStack>
                   <HStack className="justify-between">
-                    <Text className="text-gray-300 text-xs">Protein</Text>
+                    <Text className="text-gray-300 text-xs">{t("nutrition.protein")}</Text>
                     <Text className="text-gray-200 text-xs">
                       {formatNumber(log.protein)} g
                     </Text>
                   </HStack>
                   <HStack className="justify-between">
-                    <Text className="text-gray-300 text-xs">Carbs</Text>
+                    <Text className="text-gray-300 text-xs">{t("nutrition.carbs")}</Text>
                     <Text className="text-gray-200 text-xs">
                       {formatNumber(log.carbs)} g
                     </Text>
                   </HStack>
                   <HStack className="justify-between">
-                    <Text className="text-gray-300 text-xs">Fat</Text>
+                    <Text className="text-gray-300 text-xs">{t("nutrition.fat")}</Text>
                     <Text className="text-gray-200 text-xs">
                       {formatNumber(log.fat)} g
                     </Text>
                   </HStack>
                   <HStack className="justify-between">
-                    <Text className="text-gray-300 text-xs">Serving</Text>
+                    <Text className="text-gray-300 text-xs">{t("nutrition.serving")}</Text>
                     <Text className="text-gray-200 text-xs">
                       {formatNumber(log.serving_size, 0)} g
                     </Text>
@@ -521,29 +527,29 @@ export default function NutritionScreen() {
 
         <Box className="bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-6">
           <HStack className="items-center justify-between mb-3">
-            <Heading size="md">Daily Summary</Heading>
-            <Text className="text-gray-400 text-xs">Totals</Text>
+            <Heading size="md">{t("nutrition.dailySummary")}</Heading>
+            <Text className="text-gray-400 text-xs">{t("nutrition.totals")}</Text>
           </HStack>
           <HStack className="justify-between mb-2">
-            <Text className="text-gray-400 text-xs">Calories</Text>
+            <Text className="text-gray-400 text-xs">{t("nutrition.calories")}</Text>
             <Text className="text-gray-200 text-xs">
               {formatNumber(totals.calories, 0)}
             </Text>
           </HStack>
           <HStack className="justify-between mb-2">
-            <Text className="text-gray-400 text-xs">Protein</Text>
+            <Text className="text-gray-400 text-xs">{t("nutrition.protein")}</Text>
             <Text className="text-gray-200 text-xs">
               {formatNumber(totals.protein)} g
             </Text>
           </HStack>
           <HStack className="justify-between mb-2">
-            <Text className="text-gray-400 text-xs">Carbs</Text>
+            <Text className="text-gray-400 text-xs">{t("nutrition.carbs")}</Text>
             <Text className="text-gray-200 text-xs">
               {formatNumber(totals.carbs)} g
             </Text>
           </HStack>
           <HStack className="justify-between">
-            <Text className="text-gray-400 text-xs">Fat</Text>
+            <Text className="text-gray-400 text-xs">{t("nutrition.fat")}</Text>
             <Text className="text-gray-200 text-xs">
               {formatNumber(totals.fat)} g
             </Text>
@@ -552,8 +558,8 @@ export default function NutritionScreen() {
 
         <Box className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
           <HStack className="items-center justify-between mb-3">
-            <Heading size="md">Macros Chart</Heading>
-            <Text className="text-gray-400 text-xs">Daily totals</Text>
+            <Heading size="md">{t("nutrition.macrosChart")}</Heading>
+            <Text className="text-gray-400 text-xs">{t("nutrition.dailyTotals")}</Text>
           </HStack>
           <TotalsChart data={chartData} />
         </Box>

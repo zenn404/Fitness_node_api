@@ -25,6 +25,8 @@ interface AuthState {
     height?: number;
     goals?: string;
   }) => Promise<boolean>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
+  deleteAccount: () => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -227,6 +229,70 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return false;
       }
     } catch (error) {
+      set({
+        isLoading: false,
+        error: "An unexpected error occurred",
+      });
+      return false;
+    }
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const { token } = get();
+    if (!token) return false;
+
+    set({ isLoading: true, error: null });
+
+    try {
+      const response = await api.changePassword(token, currentPassword, newPassword);
+
+      if (response.success) {
+        set({ isLoading: false, error: null });
+        return true;
+      }
+
+      set({
+        isLoading: false,
+        error: response.message || "Failed to change password",
+      });
+      return false;
+    } catch {
+      set({
+        isLoading: false,
+        error: "An unexpected error occurred",
+      });
+      return false;
+    }
+  },
+
+  deleteAccount: async () => {
+    const { token } = get();
+    if (!token) return false;
+
+    set({ isLoading: true, error: null });
+
+    try {
+      const response = await api.deleteAccount(token);
+      if (!response.success) {
+        set({
+          isLoading: false,
+          error: response.message || "Failed to delete account",
+        });
+        return false;
+      }
+
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      await AsyncStorage.removeItem(USER_KEY);
+
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      });
+      return true;
+    } catch {
       set({
         isLoading: false,
         error: "An unexpected error occurred",

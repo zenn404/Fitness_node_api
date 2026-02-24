@@ -17,8 +17,10 @@ import { Input, InputField } from "@/components/ui/input";
 import { Button, ButtonText, ButtonSpinner } from "@/components/ui/button";
 import { Pressable } from "@/components/ui/pressable";
 import { useAuthStore } from "@/store/auth-store";
+import { useTranslation } from "react-i18next";
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,17 +30,17 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert(t("common.error"), t("auth.fillAllFields"));
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+      Alert.alert(t("common.error"), t("auth.passwordsNotMatch"));
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters");
+      Alert.alert(t("common.error"), t("auth.passwordMinLength"));
       return;
     }
 
@@ -70,10 +72,10 @@ export default function RegisterScreen() {
                 <Text className="text-4xl">🏋️</Text>
               </Box>
               <Heading size="2xl" className="text-center">
-                Create Account
+                {t("auth.createAccount")}
               </Heading>
               <Text className="text-gray-400 text-center">
-                Start your fitness journey
+                {t("auth.startFitnessJourney")}
               </Text>
             </VStack>
 
@@ -84,10 +86,10 @@ export default function RegisterScreen() {
             )}
 
             <VStack space="xs">
-              <Text className="text-gray-400">Full Name</Text>
+              <Text className="text-gray-400">{t("auth.fullName")}</Text>
               <Input size="xl">
                 <InputField
-                  placeholder="Enter your name"
+                  placeholder={t("auth.enterName")}
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
@@ -96,10 +98,10 @@ export default function RegisterScreen() {
             </VStack>
 
             <VStack space="xs">
-              <Text className="text-gray-400">Email</Text>
+              <Text className="text-gray-400">{t("auth.email")}</Text>
               <Input size="xl">
                 <InputField
-                  placeholder="Enter your email"
+                  placeholder={t("auth.enterEmail")}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -109,10 +111,10 @@ export default function RegisterScreen() {
             </VStack>
 
             <VStack space="xs">
-              <Text className="text-gray-400">Password</Text>
+              <Text className="text-gray-400">{t("auth.password")}</Text>
               <Input size="xl">
                 <InputField
-                  placeholder="Create a password"
+                  placeholder={t("auth.createPassword")}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -122,10 +124,10 @@ export default function RegisterScreen() {
             </VStack>
 
             <VStack space="xs">
-              <Text className="text-gray-400">Confirm Password</Text>
+              <Text className="text-gray-400">{t("auth.confirmPassword")}</Text>
               <Input size="xl">
                 <InputField
-                  placeholder="Confirm your password"
+                  placeholder={t("auth.confirmYourPassword")}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry
@@ -143,14 +145,14 @@ export default function RegisterScreen() {
               {isLoading ? (
                 <ButtonSpinner color="white" />
               ) : (
-                <ButtonText>Create Account</ButtonText>
+                <ButtonText>{t("auth.createAccount")}</ButtonText>
               )}
             </Button>
 
             <HStack className="justify-center mt-4" space="xs">
-              <Text className="text-gray-400">Already have an account?</Text>
+              <Text className="text-gray-400">{t("auth.hasAccount")}</Text>
               <Pressable onPress={goToLogin}>
-                <Text className="font-semibold text-primary-500">Sign In</Text>
+                <Text className="font-semibold text-primary-500">{t("auth.signIn")}</Text>
               </Pressable>
             </HStack>
           </VStack>

@@ -307,6 +307,80 @@ const refreshToken = async (req, res) => {
   }
 };
 
+// Change current user's password
+const changePassword = async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(503).json({
+        success: false,
+        message: "Database not configured.",
+      });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password and new password are required",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    const { data: user, error: findError } = await supabase
+      .from("users")
+      .select("id, password")
+      .eq("id", req.user.id)
+      .single();
+
+    if (findError || !user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password is incorrect",
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({ password: hashedPassword })
+      .eq("id", req.user.id);
+
+    if (updateError) {
+      return res.status(500).json({
+        success: false,
+        message: "Error updating password",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Password changed successfully",
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error changing password",
+    });
+  }
+};
+
 // Delete user account
 const deleteAccount = async (req, res) => {
   try {
@@ -356,4 +430,5 @@ module.exports = {
   updateProfile,
   refreshToken,
   deleteAccount,
+  changePassword,
 };

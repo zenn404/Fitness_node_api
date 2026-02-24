@@ -17,8 +17,10 @@ import { Input, InputField } from "@/components/ui/input";
 import { Button, ButtonText, ButtonSpinner } from "@/components/ui/button";
 import { Pressable } from "@/components/ui/pressable";
 import { useAuthStore } from "@/store/auth-store";
+import { useTranslation } from "react-i18next";
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -29,7 +31,7 @@ export default function LoginScreen() {
     console.log("Email:", email);
     console.log("Password:", password);
     if (!email || !password) {
-      Alert.alert("Error", "Please enter email and password");
+      Alert.alert(t("common.error"), t("auth.enterEmailAndPassword"));
       return;
     }
 
@@ -61,10 +63,10 @@ export default function LoginScreen() {
                 <Text className="text-4xl">💪</Text>
               </Box>
               <Heading size="2xl" className="text-center">
-                Welcome Back
+                {t("auth.welcomeBack")}
               </Heading>
               <Text className="text-gray-400 text-center">
-                Sign in to continue
+                {t("auth.signInToContinue")}
               </Text>
             </VStack>
 
@@ -75,10 +77,10 @@ export default function LoginScreen() {
             )}
 
             <VStack space="xs">
-              <Text className="text-gray-400">Email</Text>
+              <Text className="text-gray-400">{t("auth.email")}</Text>
               <Input size="xl">
                 <InputField
-                  placeholder="Enter your email"
+                  placeholder={t("auth.enterEmail")}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -88,10 +90,10 @@ export default function LoginScreen() {
             </VStack>
 
             <VStack space="xs">
-              <Text className="text-gray-400">Password</Text>
+              <Text className="text-gray-400">{t("auth.password")}</Text>
               <Input size="xl">
                 <InputField
-                  placeholder="Enter your password"
+                  placeholder={t("auth.enterPassword")}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -109,14 +111,14 @@ export default function LoginScreen() {
               {isLoading ? (
                 <ButtonSpinner color="white" />
               ) : (
-                <ButtonText>Sign In</ButtonText>
+                <ButtonText>{t("auth.signIn")}</ButtonText>
               )}
             </Button>
 
             <HStack className="justify-center mt-4" space="xs">
-              <Text className="text-gray-400">Don't have an account?</Text>
+              <Text className="text-gray-400">{t("auth.noAccount")}</Text>
               <Pressable onPress={goToRegister}>
-                <Text className="font-semibold text-primary-500">Sign Up</Text>
+                <Text className="font-semibold text-primary-500">{t("auth.signUp")}</Text>
               </Pressable>
             </HStack>
           </VStack>

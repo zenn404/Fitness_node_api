@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 
 import { useAuthStore } from "@/store/auth-store";
 
@@ -46,6 +47,7 @@ function useProtectedRoute() {
 }
 
 export default function RootLayout() {
+  const { t } = useTranslation();
   const { isInitialized } = useAuthStore();
 
   useProtectedRoute();
@@ -75,12 +77,16 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding-goals" />
         <Stack.Screen
           name="modal"
-          options={{ presentation: "modal", title: "Modal", headerShown: true }}
+          options={{
+            presentation: "modal",
+            title: t("modal.title"),
+            headerShown: true,
+          }}
         />
         <Stack.Screen
           name="workout-session"
           options={{
-            title: "Workout Session",
+            title: t("session.workoutSession"),
             presentation: "modal",
             headerShown: false,
             animation: "slide_from_bottom",

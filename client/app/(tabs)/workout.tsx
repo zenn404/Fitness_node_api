@@ -14,11 +14,16 @@ import { Heading } from "@/components/ui/heading";
 import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { scoreWorkoutForGoal, sortWorkoutsForGoal } from "@/lib/goal-recommendations";
 import { api, Workout } from "@/services/api";
+import { useAuthStore } from "@/store/auth-store";
+import { useTranslation } from "react-i18next";
 
 type DifficultyType = "All" | "Beginner" | "Intermediate" | "Advanced";
 
 export default function WorkoutScreen() {
+  const { t } = useTranslation();
+  const { user } = useAuthStore();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [filteredWorkouts, setFilteredWorkouts] = useState<Workout[]>([]);
   const [selectedDifficulty, setSelectedDifficulty] =
@@ -28,11 +33,12 @@ export default function WorkoutScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const filterWorkouts = () => {
+    const goalSorted = sortWorkoutsForGoal(workouts, user?.goals);
     if (selectedDifficulty === "All") {
-      setFilteredWorkouts(workouts);
+      setFilteredWorkouts(goalSorted);
     } else {
       setFilteredWorkouts(
-        workouts.filter((workout) => workout.difficulty === selectedDifficulty),
+        goalSorted.filter((workout) => workout.difficulty === selectedDifficulty),
       );
     }
   };
@@ -44,7 +50,7 @@ export default function WorkoutScreen() {
   useEffect(() => {
     filterWorkouts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDifficulty, workouts]);
+  }, [selectedDifficulty, workouts, user?.goals]);
 
   const fetchWorkouts = async (isRefresh = false) => {
     if (isRefresh) {
@@ -60,10 +66,10 @@ export default function WorkoutScreen() {
       if (response.success && response.data) {
         setWorkouts(response.data.workouts);
       } else {
-        setError(response.message || "Failed to load workouts");
+        setError(response.message || t("workout.failedToLoad"));
       }
     } catch (err) {
-      setError("Network error. Please try again.");
+      setError(t("common.networkError"));
       console.error("Fetch workouts error:", err);
     } finally {
       setIsLoading(false);
@@ -95,11 +101,16 @@ export default function WorkoutScreen() {
       >
         {/* Header */}
         <VStack className="mt-4 mb-6">
-          <Heading size="2xl">Workouts 💪</Heading>
+          <Heading size="2xl">{t("workout.title")}</Heading>
           <Text className="text-gray-400 mt-1">
             {!isLoading &&
-              `${workouts.length} workout${workouts.length !== 1 ? "s" : ""} available`}
+              t("workout.workoutsAvailable", { count: workouts.length })}
           </Text>
+          {user?.goals && (
+            <Text className="text-primary-500 text-xs mt-1">
+              {t("workout.recommendedByGoal")}
+            </Text>
+          )}
         </VStack>
 
         {/* Difficulty Filter */}
@@ -111,22 +122,22 @@ export default function WorkoutScreen() {
               contentContainerStyle={{ gap: 8 }}
             >
               <DifficultyChip
-                label="All"
+                label={t("workout.all")}
                 isActive={selectedDifficulty === "All"}
                 onPress={() => setSelectedDifficulty("All")}
               />
               <DifficultyChip
-                label="Beginner"
+                label={t("workout.beginner")}
                 isActive={selectedDifficulty === "Beginner"}
                 onPress={() => setSelectedDifficulty("Beginner")}
               />
               <DifficultyChip
-                label="Intermediate"
+                label={t("workout.intermediate")}
                 isActive={selectedDifficulty === "Intermediate"}
                 onPress={() => setSelectedDifficulty("Intermediate")}
               />
               <DifficultyChip
-                label="Advanced"
+                label={t("workout.advanced")}
                 isActive={selectedDifficulty === "Advanced"}
                 onPress={() => setSelectedDifficulty("Advanced")}
               />
@@ -138,7 +149,7 @@ export default function WorkoutScreen() {
         {isLoading && (
           <Box className="justify-center items-center py-20">
             <ActivityIndicator size="large" color="#C0EB6A" />
-            <Text className="mt-4 text-gray-400">Loading workouts...</Text>
+            <Text className="mt-4 text-gray-400">{t("workout.loadingWorkouts")}</Text>
           </Box>
         )}
 
@@ -150,7 +161,7 @@ export default function WorkoutScreen() {
               onPress={handleRetry}
               className="self-center bg-red-500 px-6 py-3 rounded-lg active:opacity-80"
             >
-              <Text className="font-semibold text-white">Try Again</Text>
+              <Text className="font-semibold text-white">{t("common.tryAgain")}</Text>
             </Pressable>
           </Box>
         )}
@@ -161,15 +172,17 @@ export default function WorkoutScreen() {
             <MaterialIcons name="fitness-center" size={64} color="#6b7280" />
             <Text className="mt-4 text-gray-400 text-center">
               {selectedDifficulty === "All"
-                ? "No workouts found"
-                : `No ${selectedDifficulty.toLowerCase()} workouts found`}
+                ? t("workout.noWorkoutsFound")
+                : t("workout.noLevelWorkoutsFound", {
+                    level: t(`workout.${selectedDifficulty.toLowerCase()}`),
+                  })}
             </Text>
             {selectedDifficulty !== "All" && (
               <Pressable
                 onPress={() => setSelectedDifficulty("All")}
                 className="mt-3 px-4 py-2 bg-gray-800 rounded-lg"
               >
-                <Text className="text-primary-500">Show All Workouts</Text>
+                <Text className="text-primary-500">{t("workout.showAllWorkouts")}</Text>
               </Pressable>
             )}
           </Box>
@@ -179,7 +192,11 @@ export default function WorkoutScreen() {
         {!isLoading && !error && filteredWorkouts.length > 0 && (
           <VStack space="md">
             {filteredWorkouts.map((workout) => (
-              <WorkoutCard key={workout.id} workout={workout} />
+              <WorkoutCard
+                key={workout.id}
+                workout={workout}
+                isRecommended={scoreWorkoutForGoal(workout, user?.goals) > 0}
+              />
             ))}
           </VStack>
         )}

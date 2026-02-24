@@ -20,14 +20,15 @@ import {
   FITNESS_SYSTEM_PROMPT,
   sendChatMessage,
 } from "@/services/chatservice";
+import { useTranslation } from "react-i18next";
 
 export default function ChatScreen() {
+  const { t } = useTranslation();
   const flatListRef = useRef<FlatList>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content:
-        "Hi! I'm your AI fitness coach. Ask me anything about workouts, nutrition, or fitness goals! 💪",
+      content: t("chat.greeting"),
       timestamp: new Date(),
     },
   ]);
@@ -70,7 +71,7 @@ export default function ChatScreen() {
           ...prev,
           {
             role: "assistant",
-            content: `Sorry, I encountered an error: ${response.error}. Please try again.`,
+            content: t("chat.errorMessage", { error: response.error }),
             timestamp: new Date(),
           },
         ]);
@@ -91,8 +92,7 @@ export default function ChatScreen() {
         ...prev,
         {
           role: "assistant",
-          content:
-            "Sorry, something went wrong. Please check your internet connection and try again.",
+          content: t("chat.genericError"),
           timestamp: new Date(),
         },
       ]);
@@ -135,10 +135,10 @@ export default function ChatScreen() {
             </Box>
             <VStack>
               <Heading size="lg" className="text-white">
-                AI Fitness Coach
+                {t("chat.aiCoach")}
               </Heading>
               <Text className="text-gray-400 text-sm">
-                Powered by Hugging Face
+                {t("chat.poweredBy")}
               </Text>
             </VStack>
           </HStack>
@@ -174,7 +174,7 @@ export default function ChatScreen() {
             <TextInput
               value={inputText}
               onChangeText={setInputText}
-              placeholder="Ask about workouts, nutrition..."
+              placeholder={t("chat.placeholder")}
               placeholderTextColor="#6b7280"
               className="flex-1 bg-gray-900 text-white px-4 py-3 rounded-2xl border border-gray-800"
               multiline

@@ -16,8 +16,10 @@ import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import { getDifficultyColor } from "@/lib/utils";
 import { api, Workout } from "@/services/api";
+import { useTranslation } from "react-i18next";
 
 export default function WorkoutDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; workout?: string }>();
   const { id, workout: workoutParam } = params;
@@ -41,7 +43,7 @@ export default function WorkoutDetailScreen() {
       fetchWorkoutDetails();
     } else {
       setIsLoading(false);
-      if (!initialWorkout) setError("Workout not found");
+      if (!initialWorkout) setError(t("workout.workoutNotFound"));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -61,17 +63,17 @@ export default function WorkoutDetailScreen() {
       } else {
         if (initialWorkout) {
           setWorkout(initialWorkout);
-          setSoftError("Could not load exercises. Tap Try Again to retry.");
+          setSoftError(t("workout.couldNotLoadExercises"));
         } else {
-          setError(response.message || "Failed to load workout details");
+          setError(response.message || t("workout.failedToLoadWorkoutDetails"));
         }
       }
     } catch (err) {
       if (initialWorkout) {
         setWorkout(initialWorkout);
-        setSoftError("Could not load full details. Tap Try Again to retry.");
+        setSoftError(t("workout.couldNotLoadFullDetails"));
       } else {
-        setError("Network error. Please try again.");
+        setError(t("common.networkError"));
       }
       console.error("Fetch workout details error:", err);
     } finally {
@@ -107,7 +109,7 @@ export default function WorkoutDetailScreen() {
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </Pressable>
           <Heading size="lg" className="flex-1">
-            Workout Details
+            {t("workout.workoutDetails")}
           </Heading>
         </HStack>
 
@@ -115,7 +117,7 @@ export default function WorkoutDetailScreen() {
         {isLoading && (
           <Box className="justify-center items-center py-20">
             <ActivityIndicator size="large" color="#C0EB6A" />
-            <Text className="mt-4 text-gray-400">Loading workout...</Text>
+            <Text className="mt-4 text-gray-400">{t("workout.loadingWorkout")}</Text>
           </Box>
         )}
 
@@ -127,7 +129,7 @@ export default function WorkoutDetailScreen() {
               onPress={handleRetry}
               className="self-center bg-red-500 px-6 py-3 rounded-lg active:opacity-80"
             >
-              <Text className="font-semibold text-white">Try Again</Text>
+              <Text className="font-semibold text-white">{t("common.tryAgain")}</Text>
             </Pressable>
           </Box>
         )}
@@ -165,11 +167,11 @@ export default function WorkoutDetailScreen() {
                   {/* Duration */}
                   <HStack space="xs" className="items-center">
                     <MaterialIcons name="schedule" size={20} color="#9ca3af" />
-                    <Text className="text-gray-300 font-medium">
-                      {workout.duration_minutes
-                        ? `${workout.duration_minutes} min`
-                        : "-- min"}
-                    </Text>
+                      <Text className="text-gray-300 font-medium">
+                        {workout.duration_minutes
+                        ? `${workout.duration_minutes} ${t("common.min")}`
+                        : `-- ${t("common.min")}`}
+                      </Text>
                   </HStack>
 
                   {/* Exercise count */}
@@ -180,8 +182,9 @@ export default function WorkoutDetailScreen() {
                       color="#9ca3af"
                     />
                     <Text className="text-gray-300 font-medium">
-                      {workout.exercises?.length || 0} exercise
-                      {workout.exercises?.length !== 1 ? "s" : ""}
+                      {t("workout.exerciseCount", {
+                        count: workout.exercises?.length || 0,
+                      })}
                     </Text>
                   </HStack>
                 </HStack>
@@ -192,7 +195,7 @@ export default function WorkoutDetailScreen() {
             {workout.description && (
               <Box className="bg-gray-900 p-5 border border-gray-800 rounded-2xl">
                 <Heading size="sm" className="mb-3 text-gray-200">
-                  About
+                  {t("workout.about")}
                 </Heading>
                 <Text className="text-gray-400 leading-6">
                   {workout.description}
@@ -203,7 +206,7 @@ export default function WorkoutDetailScreen() {
             {/* Exercises Section */}
             <Box className="bg-gray-900 p-5 border border-gray-800 rounded-2xl">
               <Heading size="sm" className="mb-4 text-gray-200">
-                Exercises
+                {t("workout.exercises")}
               </Heading>
 
               {workout.exercises && workout.exercises.length > 0 ? (
@@ -236,7 +239,10 @@ export default function WorkoutDetailScreen() {
                                 color="#9ca3af"
                               />
                               <Text className="text-gray-400 text-sm">
-                                {exercise.sets} sets × {exercise.reps} reps
+                                {t("workout.setsReps", {
+                                  sets: exercise.sets,
+                                  reps: exercise.reps,
+                                })}
                               </Text>
                             </HStack>
                             <HStack space="xs" className="items-center">
@@ -246,7 +252,9 @@ export default function WorkoutDetailScreen() {
                                 color="#9ca3af"
                               />
                               <Text className="text-gray-400 text-sm">
-                                {exercise.rest_seconds}s rest
+                                {t("workout.restSeconds", {
+                                  seconds: exercise.rest_seconds,
+                                })}
                               </Text>
                             </HStack>
                           </HStack>
@@ -274,10 +282,10 @@ export default function WorkoutDetailScreen() {
                   <HStack className="justify-between items-center">
                     <VStack className="flex-1">
                       <Text className="text-gray-400 text-sm">
-                        No exercises added yet
+                        {t("workout.noExercisesAdded")}
                       </Text>
                       <Text className="text-gray-500 text-xs mt-1">
-                        Exercises will appear here when added
+                        {t("workout.exercisesWillAppear")}
                       </Text>
                     </VStack>
                     <MaterialIcons
@@ -297,13 +305,13 @@ export default function WorkoutDetailScreen() {
           <Box className="justify-center items-center py-20 px-4">
             <MaterialIcons name="search-off" size={64} color="#6b7280" />
             <Text className="mt-4 text-gray-400 text-center">
-              Workout not found
+              {t("workout.workoutNotFound")}
             </Text>
             <Pressable
               onPress={() => router.back()}
               className="mt-4 px-6 py-3 bg-gray-800 rounded-lg"
             >
-              <Text className="text-primary-500 font-semibold">Go Back</Text>
+              <Text className="text-primary-500 font-semibold">{t("common.goBack")}</Text>
             </Pressable>
           </Box>
         )}
@@ -319,7 +327,7 @@ export default function WorkoutDetailScreen() {
             <HStack className="justify-center items-center" space="sm">
               <MaterialIcons name="play-arrow" size={28} color="#1f2937" />
               <Text className="font-bold text-lg text-gray-900">
-                Start Workout
+                {t("workout.startWorkout")}
               </Text>
             </HStack>
           </RNPressable>

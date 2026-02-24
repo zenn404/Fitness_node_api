@@ -9,6 +9,7 @@ const {
   updateProfile,
   refreshToken,
   deleteAccount,
+  changePassword,
 } = require("../controllers/authController");
 
 // Public routes
@@ -19,6 +20,7 @@ router.post("/login", login);
 router.post("/logout", authMiddleware, logout);
 router.get("/profile", authMiddleware, getProfile);
 router.put("/profile", authMiddleware, updateProfile);
+router.put("/password", authMiddleware, changePassword);
 router.post("/refresh", authMiddleware, refreshToken);
 router.delete("/account", authMiddleware, deleteAccount);
 

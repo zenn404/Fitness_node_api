@@ -1,4 +1,8 @@
 const supabase = require("../config/supabase");
+const USDA_API_KEY = (process.env.USDA_API_KEY || "DEMO_KEY").trim();
+const USDA_SEARCH_URL = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${encodeURIComponent(
+  USDA_API_KEY,
+)}`;
 
 const isValidDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
@@ -17,70 +21,167 @@ const toNumber = (value, field, required = false) => {
   return parsed;
 };
 
-const parseNumber = (value) => {
-  if (value === undefined || value === null) return NaN;
-  if (typeof value === "number") return value;
-  if (typeof value !== "string") return NaN;
-  const normalized = value.replace(",", ".").trim();
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : NaN;
+const normalizeText = (value = "") =>
+  value
+    .toString()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getQueryTokens = (query) =>
+  normalizeText(query)
+    .split(" ")
+    .filter((token) => token.length >= 2);
+
+const toSearchText = (product) =>
+  normalizeText(
+    [
+      product?.product_name_en,
+      product?.product_name,
+      product?.generic_name,
+      product?.description,
+      product?.brandOwner,
+      product?.brands,
+      product?.categories,
+      product?.ingredients,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+const toNameText = (product) =>
+  normalizeText(
+    [
+      product?.product_name_en,
+      product?.product_name,
+      product?.generic_name,
+      product?.description,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+const isLikelyGarbageName = (name) => {
+  const normalized = normalizeText(name);
+  if (!normalized) return true;
+  if (/^\d+$/.test(normalized.replace(/\s/g, ""))) return true;
+  return normalized.length < 2;
 };
 
-const parseServingSizeGrams = (servingSize) => {
-  if (!servingSize || typeof servingSize !== "string") return 100;
-  const match = servingSize.match(/([\d.,]+)\s*g/i);
-  if (!match) return 100;
-  const grams = parseNumber(match[1]);
-  return Number.isFinite(grams) && grams > 0 ? grams : 100;
+const getMatchedTokenCount = (text, tokens) => {
+  if (!text || tokens.length === 0) return 0;
+  let matched = 0;
+  for (const token of tokens) {
+    const wholeWord = new RegExp(`(^|\\s)${token}(\\s|$)`).test(text);
+    const startsWithWord = new RegExp(`(^|\\s)${token}`).test(text);
+    if (wholeWord || startsWithWord || text.includes(token)) {
+      matched += 1;
+    }
+  }
+  return matched;
 };
 
-const nutrientPerServing = (nutriments, servingSizeGrams, servingKey, per100gKey) => {
-  const fromServing = parseNumber(nutriments?.[servingKey]);
-  if (Number.isFinite(fromServing)) {
-    return fromServing;
+const getMatchScore = (nameText, searchText, query, queryTokens, hasEnglishName) => {
+  if (!searchText) return 0;
+
+  let score = 0;
+  const normalizedQuery = normalizeText(query);
+
+  if (normalizedQuery && nameText === normalizedQuery) {
+    score += 300;
+  }
+  if (normalizedQuery && nameText.startsWith(normalizedQuery)) {
+    score += 180;
+  }
+  if (normalizedQuery && nameText.includes(normalizedQuery)) {
+    score += 110;
   }
 
-  const from100g = parseNumber(nutriments?.[per100gKey]);
-  if (!Number.isFinite(from100g)) {
-    return 0;
+  let matchedTokens = 0;
+  for (const token of queryTokens) {
+    const wholeWord = new RegExp(`(^|\\s)${token}(\\s|$)`).test(nameText);
+    const startsWithWord = new RegExp(`(^|\\s)${token}`).test(nameText);
+    if (wholeWord) {
+      score += 70;
+      matchedTokens += 1;
+    } else if (startsWithWord) {
+      score += 45;
+      matchedTokens += 1;
+    } else if (nameText.includes(token)) {
+      score += 20;
+      matchedTokens += 1;
+    }
   }
 
-  return (from100g * servingSizeGrams) / 100;
+  if (queryTokens.length > 0 && matchedTokens === queryTokens.length) {
+    score += 120;
+  } else if (matchedTokens > 0) {
+    score += matchedTokens * 15;
+  }
+
+  // Metadata can help as a tie-breaker, but should never dominate ranking.
+  if (normalizedQuery && searchText.includes(normalizedQuery)) {
+    score += 10;
+  }
+
+  if (hasEnglishName) {
+    score += 35;
+  }
+
+  return score;
 };
 
-const toNutritionItem = (product) => {
-  const nutriments = product?.nutriments || {};
-  const servingSizeGrams = parseServingSizeGrams(product?.serving_size);
-  const name =
-    product?.product_name_en ||
-    product?.product_name ||
-    product?.generic_name ||
-    "Unknown food";
+const getNutrientValueByIds = (food, nutrientIds) => {
+  const nutrients = Array.isArray(food?.foodNutrients) ? food.foodNutrients : [];
+  const match = nutrients.find((nutrient) =>
+    nutrientIds.includes(Number(nutrient?.nutrientId)),
+  );
+  const value = Number(match?.value ?? match?.amount);
+  return Number.isFinite(value) ? value : 0;
+};
+
+const getNutrientValueByName = (food, nameMatchers) => {
+  const nutrients = Array.isArray(food?.foodNutrients) ? food.foodNutrients : [];
+  const match = nutrients.find((nutrient) => {
+    const name = normalizeText(nutrient?.nutrientName || "");
+    if (!name) return false;
+    return nameMatchers.some((matcher) => name.includes(matcher));
+  });
+  const value = Number(match?.value ?? match?.amount);
+  return Number.isFinite(value) ? value : 0;
+};
+
+const toNutritionItem = (food) => {
+  const name = food?.description || "Unknown food";
+  const servingSize =
+    Number.isFinite(Number(food?.servingSize)) &&
+    normalizeText(food?.servingSizeUnit || "") === "g"
+      ? Number(food.servingSize)
+      : 100;
 
   return {
     name,
-    calories: nutrientPerServing(
-      nutriments,
-      servingSizeGrams,
-      "energy-kcal_serving",
-      "energy-kcal_100g"
-    ),
-    serving_size_g: servingSizeGrams,
-    protein_g: nutrientPerServing(
-      nutriments,
-      servingSizeGrams,
-      "proteins_serving",
-      "proteins_100g"
-    ),
-    carbohydrates_total_g: nutrientPerServing(
-      nutriments,
-      servingSizeGrams,
-      "carbohydrates_serving",
-      "carbohydrates_100g"
-    ),
-    fat_total_g: nutrientPerServing(nutriments, servingSizeGrams, "fat_serving", "fat_100g"),
-    sugar_g: nutrientPerServing(nutriments, servingSizeGrams, "sugars_serving", "sugars_100g"),
-    fiber_g: nutrientPerServing(nutriments, servingSizeGrams, "fiber_serving", "fiber_100g"),
+    calories:
+      getNutrientValueByIds(food, [1008]) || // Energy (kcal)
+      getNutrientValueByName(food, ["energy"]),
+    serving_size_g: servingSize > 0 ? servingSize : 100,
+    protein_g:
+      getNutrientValueByIds(food, [1003]) || // Protein
+      getNutrientValueByName(food, ["protein"]),
+    carbohydrates_total_g:
+      getNutrientValueByIds(food, [1005]) || // Carbohydrate, by difference
+      getNutrientValueByName(food, ["carbohydrate"]),
+    fat_total_g:
+      getNutrientValueByIds(food, [1004]) || // Total lipid (fat)
+      getNutrientValueByName(food, ["total lipid", "fat"]),
+    sugar_g:
+      getNutrientValueByIds(food, [2000]) || // Sugars, total including NLEA
+      getNutrientValueByName(food, ["sugars"]),
+    fiber_g:
+      getNutrientValueByIds(food, [1079]) || // Fiber, total dietary
+      getNutrientValueByName(food, ["fiber"]),
   };
 };
 
@@ -103,32 +204,60 @@ const getNutrition = async (req, res) => {
       });
     }
 
-    const url =
-      `https://world.openfoodfacts.org/cgi/search.pl` +
-      `?search_terms=${encodeURIComponent(query)}` +
-      `&search_simple=1&action=process&json=1&page_size=15` +
-      `&fields=product_name,product_name_en,generic_name,serving_size,nutriments`;
-
-    const response = await fetch(url);
+    const response = await fetch(USDA_SEARCH_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: query.trim(),
+        pageSize: 30,
+        dataType: ["Foundation", "SR Legacy", "Survey (FNDDS)", "Branded"],
+      }),
+    });
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
-      console.error("OpenFoodFacts error:", response.status, text);
+      console.error("USDA FDC error:", response.status, text);
 
       return res.status(500).json({
         success: false,
-        message: "Error fetching nutrition data from OpenFoodFacts",
+        message: "Error fetching nutrition data from USDA FoodData Central",
         details: text ? text.slice(0, 240) : undefined,
       });
     }
 
     const data = await response.json().catch(() => ({}));
-    const products = Array.isArray(data?.products) ? data.products : [];
+    const foods = Array.isArray(data?.foods) ? data.foods : [];
 
-    const items = products
-      .map(toNutritionItem)
-      .filter((item) => item.name && Number.isFinite(item.calories))
-      .slice(0, 10);
+    const queryTokens = getQueryTokens(query);
+    const rankedItems = foods
+      .map((food) => {
+        const displayName = food?.description || "";
+        const nameText = toNameText(food);
+        const searchText = toSearchText(food);
+        const score = getMatchScore(nameText, searchText, query, queryTokens, true);
+        const matchedNameTokens = getMatchedTokenCount(nameText, queryTokens);
+        const item = toNutritionItem(food);
+        return { item, score, matchedNameTokens, displayName };
+      })
+      .filter(
+        ({ item, score, matchedNameTokens, displayName }) =>
+          item.name &&
+          Number.isFinite(item.calories) &&
+          score > 0 &&
+          !isLikelyGarbageName(displayName) &&
+          (queryTokens.length === 0 || matchedNameTokens > 0),
+      )
+      .sort((a, b) => b.score - a.score);
+
+    const items =
+      rankedItems.length > 0
+        ? rankedItems.slice(0, 10).map((entry) => entry.item)
+        : foods
+            .map(toNutritionItem)
+            .filter((item) => item.name && Number.isFinite(item.calories))
+            .slice(0, 10);
 
     res.json({
       success: true,

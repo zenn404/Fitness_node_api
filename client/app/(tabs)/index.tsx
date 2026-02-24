@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -12,6 +13,9 @@ import { Pressable } from "@/components/ui/pressable";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "@/store/auth-store";
 import { api, DashboardStats, Activity, DailyLog } from "@/services/api";
+import { useTranslation } from "react-i18next";
+import { getGoalCalorieTarget } from "@/lib/goal-recommendations";
+import { ProfilePrefs, getProfilePrefs } from "@/lib/profile-prefs";
 
 const toLocalDateString = (date: Date) => {
   const offset = date.getTimezoneOffset() * 60000;
@@ -32,19 +36,20 @@ const calculateMaintenanceCalories = (
 };
 
 const getWorkoutAchievement = (totalWorkouts: number) => {
-  if (totalWorkouts > 15) {
-    return { label: "Gold Medal", icon: "🥇", color: "#facc15" };
+  if (totalWorkouts >= 15) {
+    return { labelKey: "home.goldMedal", icon: "🥇", color: "#facc15" };
   }
-  if (totalWorkouts > 10) {
-    return { label: "Silver Medal", icon: "🥈", color: "#d1d5db" };
+  if (totalWorkouts >= 10) {
+    return { labelKey: "home.silverMedal", icon: "🥈", color: "#d1d5db" };
   }
-  if (totalWorkouts > 5) {
-    return { label: "Bronze Medal", icon: "🥉", color: "#d97706" };
+  if (totalWorkouts >= 5) {
+    return { labelKey: "home.bronzeMedal", icon: "🥉", color: "#d97706" };
   }
-  return { label: "No Medal Yet", icon: "🏅", color: "#6b7280" };
+  return { labelKey: "home.noMedalYet", icon: "🏅", color: "#6b7280" };
 };
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user, token } = useAuthStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -52,20 +57,49 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [foodLogs, setFoodLogs] = useState<DailyLog[]>([]);
+  const [profilePrefs, setProfilePrefs] = useState<ProfilePrefs | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const firstName = user?.name?.split(" ")[0] || "User";
+  const firstName = user?.name?.split(" ")[0] || t("home.userFallback");
   const maintenanceCalories = calculateMaintenanceCalories(
     user?.age,
     user?.weight,
     user?.height,
   );
+  const goalRecommendedTarget = getGoalCalorieTarget(maintenanceCalories, user?.goals);
   const todayWorkoutCount = stats?.today.workouts || 0;
   const achievement = getWorkoutAchievement(todayWorkoutCount);
+  const todayCaloriesConsumed = foodLogs.reduce(
+    (sum, log) => sum + Number(log.calories || 0),
+    0,
+  );
+  const selectedModeLabel = profilePrefs
+    ? t(`profile.calorieMode.${profilePrefs.calorieMode}`)
+    : null;
+  const selectedTarget = profilePrefs?.calorieTarget ?? goalRecommendedTarget;
+  const caloriesLeft =
+    typeof selectedTarget === "number"
+      ? Math.max(0, selectedTarget - todayCaloriesConsumed)
+      : null;
 
   useEffect(() => {
     fetchDashboardData();
   }, [token]);
+
+  const loadProfilePrefs = async () => {
+    const prefs = await getProfilePrefs();
+    setProfilePrefs(prefs);
+  };
+
+  useEffect(() => {
+    loadProfilePrefs();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadProfilePrefs();
+    }, []),
+  );
 
   const fetchDashboardData = async (isRefresh = false) => {
     if (isRefresh) {
@@ -130,7 +164,7 @@ export default function HomeScreen() {
         }
       >
         <VStack className="mt-4 mb-6">
-          <Text className="text-gray-400">Welcome back,</Text>
+          <Text className="text-gray-400">{t("home.welcomeBack")}</Text>
           <Heading size="2xl">{firstName} 👋</Heading>
         </VStack>
 
@@ -142,7 +176,7 @@ export default function HomeScreen() {
 
         {!isLoading && (
           <Box className="bg-gray-900 mb-6 p-4 border border-gray-800 rounded-2xl">
-            <Text className="mb-3 text-gray-400">Today's Progress</Text>
+            <Text className="mb-3 text-gray-400">{t("home.todaysProgress")}</Text>
             <HStack space="md">
               <VStack className="flex-1 items-center bg-gray-800 p-3 rounded-xl">
                 <MaterialIcons
@@ -153,7 +187,7 @@ export default function HomeScreen() {
                 <Text className="mt-1 font-bold text-lg">
                   {stats?.today.workouts || 0}
                 </Text>
-                <Text className="text-gray-400 text-xs">Workouts</Text>
+                <Text className="text-gray-400 text-xs">{t("home.workouts")}</Text>
               </VStack>
 
               <VStack className="flex-1 items-center bg-gray-800 p-3 rounded-xl">
@@ -165,7 +199,7 @@ export default function HomeScreen() {
                 <Text className="mt-1 font-bold text-lg">
                   {stats?.today.calories || 0}
                 </Text>
-                <Text className="text-gray-400 text-xs">Calories</Text>
+                <Text className="text-gray-400 text-xs">{t("home.calories")}</Text>
               </VStack>
 
               <VStack className="flex-1 items-center bg-gray-800 p-3 rounded-xl">
@@ -173,18 +207,18 @@ export default function HomeScreen() {
                 <Text className="mt-1 font-bold text-lg">
                   {stats?.today.minutes || 0}
                 </Text>
-                <Text className="text-gray-400 text-xs">Minutes</Text>
+                <Text className="text-gray-400 text-xs">{t("home.minutes")}</Text>
               </VStack>
             </HStack>
 
             <HStack className="mt-4 items-center justify-between bg-gray-800 p-3 rounded-xl">
               <VStack>
-                <Text className="text-gray-400 text-xs">Achievement</Text>
+                <Text className="text-gray-400 text-xs">{t("home.achievement")}</Text>
                 <Text className="font-semibold" style={{ color: achievement.color }}>
-                  {achievement.label}
+                  {t(achievement.labelKey)}
                 </Text>
                 <Text className="text-gray-500 text-xs">
-                  Based on workouts today ({todayWorkoutCount}).
+                  {t("home.basedOnWorkoutsToday", { count: todayWorkoutCount })}
                 </Text>
               </VStack>
               <Text className="text-2xl">{achievement.icon}</Text>
@@ -196,7 +230,7 @@ export default function HomeScreen() {
           <HStack className="justify-center items-center" space="sm">
             <MaterialIcons name="play-arrow" size={28} color="#1f2937" />
             <Text className="font-bold text-gray-900 text-lg">
-              Start Quick Workout
+              {t("home.startQuickWorkout")}
             </Text>
           </HStack>
         </Pressable>
@@ -204,12 +238,12 @@ export default function HomeScreen() {
         <Box className="bg-gray-900 mb-6 p-4 border border-gray-800 rounded-2xl">
           <HStack className="items-center justify-between">
             <VStack className="flex-1">
-              <Text className="text-gray-400 text-xs">Estimated Maintenance</Text>
+              <Text className="text-gray-400 text-xs">{t("home.estimatedMaintenance")}</Text>
               <Heading size="md">
-                {maintenanceCalories ? `${maintenanceCalories} kcal/day` : "--"}
+                {maintenanceCalories ? t("home.kcalPerDay", { value: maintenanceCalories }) : "--"}
               </Heading>
               <Text className="text-gray-500 text-xs">
-                Based on your age, weight, and height.
+                {t("home.basedOnUserStats")}
               </Text>
             </VStack>
             <Box className="bg-gray-800 p-3 rounded-xl">
@@ -218,19 +252,49 @@ export default function HomeScreen() {
           </HStack>
         </Box>
 
+        <Box className="bg-gray-900 mb-6 p-4 border border-gray-800 rounded-2xl">
+          <HStack className="items-start justify-between">
+            <VStack className="flex-1">
+              <Text className="text-gray-400 text-xs">{t("home.caloriePlan")}</Text>
+              <Heading size="md">
+                {selectedModeLabel || "--"}
+                {typeof selectedTarget === "number"
+                  ? ` • ${selectedTarget} ${t("common.kcal")}`
+                  : ""}
+              </Heading>
+              <Text className="text-gray-400 text-xs mt-1">
+                {t("home.consumedToday")}: {Math.round(todayCaloriesConsumed)} {t("common.kcal")}
+              </Text>
+              <Text className="text-gray-500 text-xs">
+                {caloriesLeft !== null
+                  ? `${t("home.remainingToday")}: ${Math.round(caloriesLeft)} ${t("common.kcal")}`
+                  : t("home.setTargetInProfile")}
+              </Text>
+              {user?.goals && goalRecommendedTarget && (
+                <Text className="text-gray-500 text-xs mt-1">
+                  {t("home.goalRecommendation")}: {goalRecommendedTarget} {t("common.kcal")}
+                </Text>
+              )}
+            </VStack>
+            <Box className="bg-gray-800 p-3 rounded-xl">
+              <MaterialIcons name="local-fire-department" size={22} color="#f97316" />
+            </Box>
+          </HStack>
+        </Box>
+
         <HStack className="justify-between items-center mb-4">
-          <Heading size="md">Today's Food Log</Heading>
+          <Heading size="md">{t("home.todaysFoodLog")}</Heading>
           <Pressable onPress={() => router.push("/(tabs)/nutrition")}>
-            <Text className="text-primary-500">Open Nutrition</Text>
+            <Text className="text-primary-500">{t("home.openNutrition")}</Text>
           </Pressable>
         </HStack>
 
         {!isLoading && foodLogs.length === 0 && (
           <Box className="items-center bg-gray-900 p-6 mb-6 border border-gray-800 rounded-2xl">
             <MaterialIcons name="restaurant" size={36} color="#6b7280" />
-            <Text className="mt-2 text-gray-400">No food logged today</Text>
+            <Text className="mt-2 text-gray-400">{t("home.noFoodLoggedToday")}</Text>
             <Text className="text-gray-500 text-sm">
-              Add foods from the Nutrition tab.
+              {t("home.addFoodsFromNutrition")}
             </Text>
           </Box>
         )}
@@ -258,18 +322,18 @@ export default function HomeScreen() {
         )}
 
         <HStack className="justify-between items-center mb-4">
-          <Heading size="md">Recent Activity</Heading>
+          <Heading size="md">{t("home.recentActivity")}</Heading>
           <Pressable>
-            <Text className="text-primary-500">See All</Text>
+            <Text className="text-primary-500">{t("home.seeAll")}</Text>
           </Pressable>
         </HStack>
 
         {!isLoading && activities.length === 0 && (
           <Box className="items-center bg-gray-900 p-6 border border-gray-800 rounded-2xl">
             <MaterialIcons name="history" size={40} color="#6b7280" />
-            <Text className="mt-2 text-gray-400">No recent activity</Text>
+            <Text className="mt-2 text-gray-400">{t("home.noRecentActivity")}</Text>
             <Text className="text-gray-500 text-sm">
-              Start a workout to see it here!
+              {t("home.startWorkoutToSee")}
             </Text>
           </Box>
         )}

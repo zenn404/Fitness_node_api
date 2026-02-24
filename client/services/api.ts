@@ -116,6 +116,25 @@ class ApiService {
     });
   }
 
+  async changePassword(
+    token: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<ApiResponse> {
+    return this.request("/api/auth/password", {
+      method: "PUT",
+      body: { currentPassword, newPassword },
+      token,
+    });
+  }
+
+  async deleteAccount(token: string): Promise<ApiResponse> {
+    return this.request("/api/auth/account", {
+      method: "DELETE",
+      token,
+    });
+  }
+
   // Workout endpoints
   async getWorkouts(params?: {
     difficulty?: string;
