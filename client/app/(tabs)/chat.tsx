@@ -17,12 +17,14 @@ import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import {
   ChatMessage,
-  FITNESS_SYSTEM_PROMPT,
+  getFitnessSystemPrompt,
   sendChatMessage,
 } from "@/services/chatservice";
 import { useTranslation } from "react-i18next";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function ChatScreen() {
+  const {user} = useAuthStore();
   const { t } = useTranslation();
   const flatListRef = useRef<FlatList>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -62,7 +64,13 @@ export default function ChatScreen() {
       // Send to Hugging Face AI
       const response = await sendChatMessage(
         [...messages, userMessage],
-        FITNESS_SYSTEM_PROMPT,
+        getFitnessSystemPrompt({
+          name: user?.name,
+          weight: user?.weight,
+          height: user?.height,
+          age: user?.age,
+          goals: user?.goals,
+        }),
       );
 
       if (response.error) {

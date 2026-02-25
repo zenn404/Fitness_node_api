@@ -1,6 +1,7 @@
 import { api, User } from "@/services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
+import { initializeDefaultCaloriePlan } from "@/lib/profile-prefs";
 
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "auth_user";
@@ -51,6 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // Save to storage
         await AsyncStorage.setItem(TOKEN_KEY, token);
         await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+        await initializeDefaultCaloriePlan(user);
 
         set({
           user,
@@ -89,6 +91,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // Save to storage
         await AsyncStorage.setItem(TOKEN_KEY, token);
         await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+        await initializeDefaultCaloriePlan(user);
 
         set({
           user,
@@ -157,6 +160,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (response.success && response.data) {
           const profileUser = response.data.user;
+          await initializeDefaultCaloriePlan(profileUser);
 
           set({
             user: profileUser,
@@ -213,6 +217,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const updatedUser = response.data.user;
 
         await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+        await initializeDefaultCaloriePlan(updatedUser);
 
         set({
           user: updatedUser,

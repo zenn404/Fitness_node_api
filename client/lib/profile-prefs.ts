@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { User } from "@/services/api";
 
 const PROFILE_PREFS_KEY = "@profile_prefs_v1";
 
@@ -74,3 +75,36 @@ export const toggleFavoriteWorkout = async (
 export const isWorkoutFavorite = (prefs: ProfilePrefs, workoutId: string): boolean =>
   prefs.favoriteWorkouts.some((w) => w.id === workoutId);
 
+const calculateMaintenanceCalories = (
+  age?: number,
+  weightKg?: number,
+  heightCm?: number,
+): number | null => {
+  if (!age || !weightKg || !heightCm) {
+    return null;
+  }
+  const bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
+  return Math.round(bmr * 1.2);
+};
+
+export const initializeDefaultCaloriePlan = async (
+  user?: Pick<User, "age" | "weight" | "height"> | null,
+): Promise<ProfilePrefs | null> => {
+  if (!user) return null;
+  const maintenance = calculateMaintenanceCalories(user.age, user.weight, user.height);
+  if (!maintenance) return null;
+
+  const prefs = await getProfilePrefs();
+  // Keep user's existing target/mode if already configured.
+  if (typeof prefs.calorieTarget === "number" && prefs.calorieTarget > 0) {
+    return prefs;
+  }
+
+  const next: ProfilePrefs = {
+    ...prefs,
+    calorieMode: "maintenance",
+    calorieTarget: maintenance,
+  };
+  await saveProfilePrefs(next);
+  return next;
+};
