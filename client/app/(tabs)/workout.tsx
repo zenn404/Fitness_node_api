@@ -11,6 +11,8 @@ import { Input, InputField } from "@/components/ui/input";
 import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { api } from "@/services/api";
+import { useAuthStore } from "@/store/auth-store";
 
 type SetEntry = {
   id: string;
@@ -48,6 +50,10 @@ export default function WorkoutScreen() {
   const [exercises, setExercises] = useState<ExerciseEntry[]>([]);
   const [activeRest, setActiveRest] = useState<number | null>(null);
   const [restRunning, setRestRunning] = useState(false);
+  const [workoutId, setWorkoutId] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const { token } = useAuthStore();
 
   useEffect(() => {
     if (!restRunning || activeRest === null) return;
@@ -74,7 +80,30 @@ export default function WorkoutScreen() {
     return { totalSets, completedSets, totalExercises: exercises.length };
   }, [exercises]);
 
-  const handleAddExercise = () => {
+  const ensureWorkout = async () => {
+    if (!token) {
+      return null;
+    }
+
+    if (workoutId) {
+      return workoutId;
+    }
+
+    const response = await api.createWorkout(token, {
+      name: workoutName || "Workout Session",
+      description: "Created from mobile app",
+      difficulty: "Beginner",
+    });
+
+    if (response.success && response.data?.workout) {
+      setWorkoutId(response.data.workout.id);
+      return response.data.workout.id;
+    }
+
+    return null;
+  };
+
+  const handleAddExercise = async () => {
     if (!exerciseName.trim()) {
       Alert.alert("Missing info", "Add an exercise name.");
       return;
@@ -94,6 +123,38 @@ export default function WorkoutScreen() {
 
     setExercises((prev) => [newExercise, ...prev]);
     setExerciseName("");
+
+    if (!token) {
+      Alert.alert("Login required", "Sign in to sync workouts to the server.");
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const resolvedWorkoutId = await ensureWorkout();
+      if (!resolvedWorkoutId) {
+        Alert.alert("Sync failed", "Unable to create workout on the server.");
+        return;
+      }
+
+      const response = await api.addExerciseToWorkout(token, resolvedWorkoutId, {
+        name: newExercise.name,
+        muscle_group: newExercise.muscleGroup,
+        sets,
+        reps,
+        rest_seconds: newExercise.restSeconds,
+        notes: "Added from mobile workout plan",
+      });
+
+      if (!response.success) {
+        Alert.alert("Sync failed", response.message || "Unable to sync exercise");
+      }
+    } catch (error) {
+      console.error("Sync exercise error:", error);
+      Alert.alert("Sync failed", "Unable to sync exercise");
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleToggleSet = (exerciseId: string, setId: string) => {
@@ -219,8 +280,8 @@ export default function WorkoutScreen() {
                 </Input>
               </Box>
             </HStack>
-            <Button size="lg" onPress={handleAddExercise}>
-              <ButtonText>Add to Plan</ButtonText>
+            <Button size="lg" onPress={handleAddExercise} disabled={isSyncing}>
+              <ButtonText>{isSyncing ? "Syncing..." : "Add to Plan"}</ButtonText>
             </Button>
           </VStack>
         </Box>

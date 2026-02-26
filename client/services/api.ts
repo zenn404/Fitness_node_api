@@ -125,6 +125,46 @@ class ApiService {
     });
   }
 
+  async createWorkout(
+    token: string,
+    payload: {
+      name: string;
+      description?: string | null;
+      difficulty?: "Beginner" | "Intermediate" | "Advanced";
+      duration_minutes?: number | null;
+    }
+  ): Promise<ApiResponse<{ workout: Workout }>> {
+    return this.request("/api/workouts", {
+      method: "POST",
+      body: payload,
+      token,
+    });
+  }
+
+  async addExerciseToWorkout(
+    token: string,
+    workoutId: string,
+    payload: {
+      exercise_id?: string;
+      name?: string;
+      description?: string | null;
+      muscle_group?: string;
+      difficulty?: "Beginner" | "Intermediate" | "Advanced";
+      image_url?: string | null;
+      sets?: number;
+      reps?: number;
+      rest_seconds?: number;
+      order_index?: number;
+      notes?: string | null;
+    }
+  ): Promise<ApiResponse<{ workoutExercise: any }>> {
+    return this.request(`/api/workouts/${workoutId}/exercises`, {
+      method: "POST",
+      body: payload,
+      token,
+    });
+  }
+
   // Dashboard endpoints
   async getDashboardStats(token: string): Promise<ApiResponse<DashboardStats>> {
     return this.request("/api/dashboard/stats", {
