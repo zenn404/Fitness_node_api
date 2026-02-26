@@ -268,7 +268,7 @@ const deleteWorkout = async (req, res) => {
   }
 };
 
-// Add exercise to workout
+// Add exercise to workout (supports custom exercise creation)
 const addExerciseToWorkout = async (req, res) => {
   try {
     if (!supabase) {
@@ -279,13 +279,103 @@ const addExerciseToWorkout = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { exercise_id, sets, reps, rest_seconds, order_index, notes } =
-      req.body;
+    const {
+      exercise_id,
+      name,
+      description,
+      muscle_group,
+      difficulty,
+      image_url,
+      sets,
+      reps,
+      rest_seconds,
+      order_index,
+      notes,
+    } = req.body;
 
-    if (!exercise_id) {
+    let resolvedExerciseId = exercise_id;
+
+    if (!resolvedExerciseId) {
+      if (!name || !muscle_group) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide exercise_id or name + muscle_group",
+        });
+      }
+
+      const trimmedName = String(name).trim();
+
+      if (!trimmedName) {
+        return res.status(400).json({
+          success: false,
+          message: "Exercise name cannot be empty",
+        });
+      }
+
+      const { data: existing, error: existingError } = await supabase
+        .from("exercises")
+        .select("id, name")
+        .ilike("name", trimmedName)
+        .limit(1);
+
+      if (existingError) {
+        console.error("Supabase error:", existingError);
+        return res.status(500).json({
+          success: false,
+          message: "Error finding existing exercise",
+        });
+      }
+
+      if (existing && existing.length > 0) {
+        resolvedExerciseId = existing[0].id;
+      } else {
+        const { data: createdExercise, error: createError } = await supabase
+          .from("exercises")
+          .insert([
+            {
+              name: trimmedName,
+              description: description || null,
+              muscle_group,
+              difficulty: difficulty || "Beginner",
+              image_url: image_url || null,
+            },
+          ])
+          .select("id")
+          .single();
+
+        if (createError) {
+          console.error("Supabase error:", createError);
+          if (createError.code === "23505") {
+            const { data: fallback, error: fallbackError } = await supabase
+              .from("exercises")
+              .select("id")
+              .ilike("name", trimmedName)
+              .limit(1);
+
+            if (fallbackError || !fallback || fallback.length === 0) {
+              return res.status(500).json({
+                success: false,
+                message: "Error resolving custom exercise",
+              });
+            }
+
+            resolvedExerciseId = fallback[0].id;
+          } else {
+            return res.status(500).json({
+              success: false,
+              message: "Error creating custom exercise",
+            });
+          }
+        } else {
+          resolvedExerciseId = createdExercise.id;
+        }
+      }
+    }
+
+    if (!resolvedExerciseId) {
       return res.status(400).json({
         success: false,
-        message: "Please provide exercise_id",
+        message: "Unable to resolve exercise_id",
       });
     }
 
@@ -294,7 +384,7 @@ const addExerciseToWorkout = async (req, res) => {
       .insert([
         {
           workout_id: id,
-          exercise_id,
+          exercise_id: resolvedExerciseId,
           sets: sets || 3,
           reps: reps || 10,
           rest_seconds: rest_seconds || 60,

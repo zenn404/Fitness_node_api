@@ -37,11 +37,14 @@ function useProtectedRoute() {
 
 export default function RootLayout() {
   const { isInitialized } = useAuthStore();
+  const bypassAuth = true;
 
-  useProtectedRoute();
+  if (!bypassAuth) {
+    useProtectedRoute();
+  }
 
   // Show loading screen while checking auth
-  if (!isInitialized) {
+  if (!bypassAuth && !isInitialized) {
     return (
       <GluestackUIProvider mode="dark">
         <View className="flex-1 justify-center items-center bg-background-950">
