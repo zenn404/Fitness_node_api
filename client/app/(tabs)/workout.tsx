@@ -11,12 +11,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { Box } from "@/components/ui/box";
 import { Heading } from "@/components/ui/heading";
+import { Input, InputField } from "@/components/ui/input";
 import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import { scoreWorkoutForGoal, sortWorkoutsForGoal } from "@/lib/goal-recommendations";
+import { getThemePalette } from "@/lib/theme-palette";
 import { api, Workout } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
+import { useThemeStore } from "@/store/theme-store";
 import { useTranslation } from "react-i18next";
 
 type DifficultyType = "All" | "Beginner" | "Intermediate" | "Advanced";
@@ -24,23 +27,33 @@ type DifficultyType = "All" | "Beginner" | "Intermediate" | "Advanced";
 export default function WorkoutScreen() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [filteredWorkouts, setFilteredWorkouts] = useState<Workout[]>([]);
   const [selectedDifficulty, setSelectedDifficulty] =
     useState<DifficultyType>("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const filterWorkouts = () => {
-    const goalSorted = sortWorkoutsForGoal(workouts, user?.goals);
-    if (selectedDifficulty === "All") {
-      setFilteredWorkouts(goalSorted);
-    } else {
-      setFilteredWorkouts(
-        goalSorted.filter((workout) => workout.difficulty === selectedDifficulty),
+    const normalized = searchQuery.trim().toLowerCase();
+    const goalSorted = sortWorkoutsForGoal(workouts, user?.goals).filter((workout) => {
+      if (selectedDifficulty !== "All" && workout.difficulty !== selectedDifficulty) {
+        return false;
+      }
+      if (!normalized) {
+        return true;
+      }
+      return (
+        workout.name.toLowerCase().includes(normalized) ||
+        (workout.description || "").toLowerCase().includes(normalized) ||
+        workout.difficulty.toLowerCase().includes(normalized)
       );
-    }
+    });
+    setFilteredWorkouts(goalSorted);
   };
 
   useEffect(() => {
@@ -50,7 +63,7 @@ export default function WorkoutScreen() {
   useEffect(() => {
     filterWorkouts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDifficulty, workouts, user?.goals]);
+  }, [selectedDifficulty, workouts, user?.goals, searchQuery]);
 
   const fetchWorkouts = async (isRefresh = false) => {
     if (isRefresh) {
@@ -86,7 +99,7 @@ export default function WorkoutScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView
         className="flex-1 px-4"
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -94,26 +107,37 @@ export default function WorkoutScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor="#C0EB6A"
-            colors={["#C0EB6A"]}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
           />
         }
       >
-        {/* Header */}
         <VStack className="mt-4 mb-6">
-          <Heading size="2xl">{t("workout.title")}</Heading>
-          <Text className="text-gray-400 mt-1">
+          <Heading size="2xl" style={{ color: colors.text }}>{t("workout.title")}</Heading>
+          <Text className="mt-1" style={{ color: colors.textMuted }}>
             {!isLoading &&
               t("workout.workoutsAvailable", { count: workouts.length })}
           </Text>
           {user?.goals && (
-            <Text className="text-primary-500 text-xs mt-1">
+            <Text className="text-xs mt-1" style={{ color: colors.accent }}>
               {t("workout.recommendedByGoal")}
             </Text>
           )}
         </VStack>
 
-        {/* Difficulty Filter */}
+        {!isLoading && workouts.length > 0 && (
+          <Box className="mb-4">
+            <Input size="lg" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
+              <InputField
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search workouts by name, difficulty..."
+                autoCapitalize="none"
+              />
+            </Input>
+          </Box>
+        )}
+
         {!isLoading && workouts.length > 0 && (
           <Box className="mb-6">
             <ScrollView
@@ -145,50 +169,56 @@ export default function WorkoutScreen() {
           </Box>
         )}
 
-        {/* Loading State */}
         {isLoading && (
           <Box className="justify-center items-center py-20">
-            <ActivityIndicator size="large" color="#C0EB6A" />
-            <Text className="mt-4 text-gray-400">{t("workout.loadingWorkouts")}</Text>
+            <ActivityIndicator size="large" color={colors.accent} />
+            <Text className="mt-4" style={{ color: colors.textMuted }}>{t("workout.loadingWorkouts")}</Text>
           </Box>
         )}
 
-        {/* Error State */}
         {error && !isLoading && (
-          <Box className="bg-red-900/30 p-4 border border-red-500 rounded-xl">
-            <Text className="text-red-400 text-center mb-3">{error}</Text>
+          <Box
+            className="p-4 border rounded-xl"
+            style={{ backgroundColor: colors.dangerSoft, borderColor: colors.danger }}
+          >
+            <Text className="text-center mb-3" style={{ color: colors.danger }}>{error}</Text>
             <Pressable
               onPress={handleRetry}
-              className="self-center bg-red-500 px-6 py-3 rounded-lg active:opacity-80"
+              className="self-center px-6 py-3 rounded-lg active:opacity-80"
+              style={{ backgroundColor: colors.danger }}
             >
-              <Text className="font-semibold text-white">{t("common.tryAgain")}</Text>
+              <Text className="font-semibold" style={{ color: "#fff" }}>{t("common.tryAgain")}</Text>
             </Pressable>
           </Box>
         )}
 
-        {/* Empty State */}
         {!isLoading && !error && filteredWorkouts.length === 0 && (
           <Box className="justify-center items-center py-20">
-            <MaterialIcons name="fitness-center" size={64} color="#6b7280" />
-            <Text className="mt-4 text-gray-400 text-center">
-              {selectedDifficulty === "All"
+            <MaterialIcons name="fitness-center" size={64} color={colors.icon} />
+            <Text className="mt-4 text-center" style={{ color: colors.textMuted }}>
+              {searchQuery.trim().length > 0
+                ? `No workouts match "${searchQuery.trim()}".`
+                : selectedDifficulty === "All"
                 ? t("workout.noWorkoutsFound")
                 : t("workout.noLevelWorkoutsFound", {
                     level: t(`workout.${selectedDifficulty.toLowerCase()}`),
                   })}
             </Text>
-            {selectedDifficulty !== "All" && (
+            {(selectedDifficulty !== "All" || searchQuery.trim().length > 0) && (
               <Pressable
-                onPress={() => setSelectedDifficulty("All")}
-                className="mt-3 px-4 py-2 bg-gray-800 rounded-lg"
+                onPress={() => {
+                  setSelectedDifficulty("All");
+                  setSearchQuery("");
+                }}
+                className="mt-3 px-4 py-2 rounded-lg"
+                style={{ backgroundColor: colors.surfaceAlt }}
               >
-                <Text className="text-primary-500">{t("workout.showAllWorkouts")}</Text>
+                <Text style={{ color: colors.accent }}>Show all workouts</Text>
               </Pressable>
             )}
           </Box>
         )}
 
-        {/* Workout List */}
         {!isLoading && !error && filteredWorkouts.length > 0 && (
           <VStack space="md">
             {filteredWorkouts.map((workout) => (
@@ -205,7 +235,6 @@ export default function WorkoutScreen() {
   );
 }
 
-// Difficulty Filter Chip Component
 function DifficultyChip({
   label,
   isActive,
@@ -215,17 +244,21 @@ function DifficultyChip({
   isActive: boolean;
   onPress: () => void;
 }) {
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
+
   return (
     <RNPressable
       onPress={onPress}
-      className={`px-4 py-2 rounded-full ${
-        isActive ? "bg-primary-500" : "bg-gray-800 border border-gray-700"
-      }`}
+      className="px-4 py-2 rounded-full border"
+      style={{
+        backgroundColor: isActive ? colors.accent : colors.surface,
+        borderColor: isActive ? colors.accent : colors.border,
+      }}
     >
       <Text
-        className={`font-semibold ${
-          isActive ? "text-gray-900" : "text-gray-400"
-        }`}
+        className="font-semibold"
+        style={{ color: isActive ? colors.accentText : colors.textMuted }}
       >
         {label}
       </Text>

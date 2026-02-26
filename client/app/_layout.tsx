@@ -6,6 +6,8 @@ import "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 
 import { useAuthStore } from "@/store/auth-store";
+import { useThemeStore } from "@/store/theme-store";
+import { getThemePalette } from "@/lib/theme-palette";
 
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import "@/global.css";
@@ -49,26 +51,32 @@ function useProtectedRoute() {
 export default function RootLayout() {
   const { t } = useTranslation();
   const { isInitialized } = useAuthStore();
+  const { theme, loadTheme } = useThemeStore();
+  const colors = getThemePalette(theme);
 
   useProtectedRoute();
+
+  useEffect(() => {
+    loadTheme();
+  }, [loadTheme]);
 
   // Show loading screen while checking auth
   if (!isInitialized) {
     return (
-      <GluestackUIProvider mode="dark">
+      <GluestackUIProvider mode={theme}>
         <View className="flex-1 justify-center items-center bg-background-950">
-          <ActivityIndicator size="large" color="#C0EB6A" />
+          <ActivityIndicator size="large" color={colors.accent} />
         </View>
       </GluestackUIProvider>
     );
   }
 
   return (
-    <GluestackUIProvider mode="dark">
+    <GluestackUIProvider mode={theme}>
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: "#1f2937" },
+          contentStyle: { backgroundColor: colors.background },
         }}
       >
         <Stack.Screen name="(auth)" />
@@ -93,7 +101,7 @@ export default function RootLayout() {
           }}
         />
       </Stack>
-      <StatusBar style="light" />
+      <StatusBar style={theme === "dark" ? "light" : "dark"} />
     </GluestackUIProvider>
   );
 }

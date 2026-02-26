@@ -16,9 +16,11 @@ import { HStack } from "@/components/ui/hstack";
 import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { getThemePalette } from "@/lib/theme-palette";
 import { getDifficultyColor } from "@/lib/utils";
 import { api, Exercise, Workout } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
+import { useThemeStore } from "@/store/theme-store";
 import { useTranslation } from "react-i18next";
 
 type SessionPhase = "exercise" | "rest" | "completed";
@@ -36,6 +38,8 @@ export default function WorkoutSessionScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { token } = useAuthStore();
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
   const { workout: workoutParam } = useLocalSearchParams<{ workout: string }>();
   const workout: Workout | null = workoutParam
     ? JSON.parse(workoutParam)
@@ -264,16 +268,17 @@ export default function WorkoutSessionScreen() {
 
   if (!workout || exercises.length === 0) {
     return (
-      <SafeAreaView className="flex-1 justify-center items-center bg-gray-950">
-        <MaterialIcons name="error-outline" size={64} color="#ef4444" />
-        <Text className="mt-4 text-gray-400 text-center">
+      <SafeAreaView className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
+        <MaterialIcons name="error-outline" size={64} color={colors.danger} />
+        <Text className="mt-4 text-center" style={{ color: colors.textMuted }}>
           {t("session.noExercisesFound")}
         </Text>
         <Pressable
           onPress={() => router.back()}
-          className="mt-6 px-6 py-3 bg-gray-800 rounded-lg"
+          className="mt-6 px-6 py-3 rounded-lg"
+          style={{ backgroundColor: colors.surfaceAlt }}
         >
-          <Text className="text-primary-500 font-semibold">{t("common.goBack")}</Text>
+          <Text className="font-semibold" style={{ color: colors.accent }}>{t("common.goBack")}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -281,35 +286,36 @@ export default function WorkoutSessionScreen() {
 
   if (session.phase === "completed") {
     return (
-      <SafeAreaView className="flex-1 bg-gray-950" edges={["top", "bottom"]}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={["top", "bottom"]}>
         <Box className="flex-1 justify-center items-center px-6">
-          <Box className="bg-primary-500/20 p-8 rounded-full mb-6">
-            <MaterialIcons name="emoji-events" size={80} color="#C0EB6A" />
+          <Box className="p-8 rounded-full mb-6" style={{ backgroundColor: colors.accentSoft }}>
+            <MaterialIcons name="emoji-events" size={80} color={colors.accent} />
           </Box>
-          <Heading size="3xl" className="text-center mb-4">
+          <Heading size="3xl" className="text-center mb-4" style={{ color: colors.text }}>
             {t("session.workoutComplete")}
           </Heading>
-          <Text className="text-gray-400 text-center text-lg mb-8">
+          <Text className="text-center text-lg mb-8" style={{ color: colors.textMuted }}>
             {t("session.greatJob", { name: workout.name })}
           </Text>
           <VStack
-            className="w-full bg-gray-900 p-6 rounded-2xl mb-8"
+            className="w-full p-6 rounded-2xl mb-8"
+            style={{ backgroundColor: colors.surface }}
             space="md"
           >
             <HStack className="justify-between items-center">
-              <Text className="text-gray-400">{t("workout.exercises")}</Text>
-              <Text className="text-white font-semibold">
+              <Text style={{ color: colors.textMuted }}>{t("workout.exercises")}</Text>
+              <Text className="font-semibold" style={{ color: colors.text }}>
                 {exercises.length}
               </Text>
             </HStack>
             <HStack className="justify-between items-center">
-              <Text className="text-gray-400">{t("session.totalSets")}</Text>
-              <Text className="text-white font-semibold">
+              <Text style={{ color: colors.textMuted }}>{t("session.totalSets")}</Text>
+              <Text className="font-semibold" style={{ color: colors.text }}>
                 {exercises.reduce((acc, ex) => acc + ex.sets, 0)}
               </Text>
             </HStack>
             <HStack className="justify-between items-center">
-              <Text className="text-gray-400">{t("session.difficulty")}</Text>
+              <Text style={{ color: colors.textMuted }}>{t("session.difficulty")}</Text>
               <Text
                 className="font-semibold"
                 style={{ color: getDifficultyColor(workout.difficulty) }}
@@ -320,9 +326,10 @@ export default function WorkoutSessionScreen() {
           </VStack>
           <RNPressable
             onPress={handleFinish}
-            className="w-full bg-primary-500 py-4 rounded-2xl active:opacity-90"
+            className="w-full py-4 rounded-2xl active:opacity-90"
+            style={{ backgroundColor: colors.accent }}
           >
-            <Text className="text-center font-bold text-lg text-gray-900">
+            <Text className="text-center font-bold text-lg" style={{ color: colors.accentText }}>
               {t("session.finish")}
             </Text>
           </RNPressable>
@@ -331,15 +338,15 @@ export default function WorkoutSessionScreen() {
     );
   }
   return (
-    <SafeAreaView className="flex-1 bg-gray-950" edges={["top", "bottom"]}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={["top", "bottom"]}>
       <HStack className="px-4 py-3 items-center justify-between">
         <HStack className="items-center" space="sm">
           <Pressable onPress={handleStop} className="p-2 active:opacity-70">
-            <MaterialIcons name="close" size={24} color="#ffffff" />
+            <MaterialIcons name="close" size={24} color={colors.text} />
           </Pressable>
           <VStack>
-            <Text className="text-gray-400 text-sm">{workout.name}</Text>
-            <Text className="text-white font-medium">
+            <Text className="text-sm" style={{ color: colors.textMuted }}>{workout.name}</Text>
+            <Text className="font-medium" style={{ color: colors.text }}>
               {t("session.exerciseOf", {
                 current: session.currentExerciseIndex + 1,
                 total: exercises.length,
@@ -363,10 +370,11 @@ export default function WorkoutSessionScreen() {
       </HStack>
 
       <Box className="px-4 py-2">
-        <Box className="h-2 bg-gray-800 rounded-full overflow-hidden">
+        <Box className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: colors.surfaceAlt }}>
           <Animated.View
-            className="h-full bg-primary-500 rounded-full"
+            className="h-full rounded-full"
             style={{
+              backgroundColor: colors.accent,
               width: progressAnim.interpolate({
                 inputRange: [0, 100],
                 outputRange: ["0%", "100%"],
@@ -374,7 +382,7 @@ export default function WorkoutSessionScreen() {
             }}
           />
         </Box>
-        <Text className="text-gray-500 text-xs mt-1 text-right">
+        <Text className="text-xs mt-1 text-right" style={{ color: colors.textSubtle }}>
           {Math.round(calculateProgress())}% {t("session.complete")}
         </Text>
       </Box>
@@ -412,34 +420,34 @@ export default function WorkoutSessionScreen() {
               {formatTime(session.timeRemaining)}
             </Text>
             {session.isPaused && (
-              <Text className="text-gray-400 text-sm mt-2">{t("session.paused")}</Text>
+              <Text className="text-sm mt-2" style={{ color: colors.textMuted }}>{t("session.paused")}</Text>
             )}
           </Box>
         </Box>
 
         <VStack className="items-center mb-8" space="sm">
-          <Heading size="xl" className="text-center">
+          <Heading size="xl" className="text-center" style={{ color: colors.text }}>
             {currentExercise?.name}
           </Heading>
           <HStack className="items-center" space="md">
             <HStack className="items-center" space="xs">
-              <MaterialIcons name="repeat" size={18} color="#9ca3af" />
-              <Text className="text-gray-400">
+              <MaterialIcons name="repeat" size={18} color={colors.icon} />
+              <Text style={{ color: colors.textMuted }}>
                 {t("session.setOf", {
                   current: session.currentSet,
                   total: currentExercise?.sets,
                 })}
               </Text>
             </HStack>
-            <Text className="text-gray-600">•</Text>
+            <Text style={{ color: colors.textSubtle }}>•</Text>
             <HStack className="items-center" space="xs">
-              <MaterialIcons name="fitness-center" size={18} color="#9ca3af" />
-              <Text className="text-gray-400">
+              <MaterialIcons name="fitness-center" size={18} color={colors.icon} />
+              <Text style={{ color: colors.textMuted }}>
                 {t("session.reps", { count: currentExercise?.reps || 0 })}
               </Text>
             </HStack>
           </HStack>
-          <Text className="text-gray-500 text-sm uppercase tracking-wide">
+          <Text className="text-sm uppercase tracking-wide" style={{ color: colors.textSubtle }}>
             {currentExercise?.muscle_group}
           </Text>
         </VStack>
@@ -450,11 +458,12 @@ export default function WorkoutSessionScreen() {
           <VStack space="md">
             <RNPressable
               onPress={handleStart}
-              className="w-full bg-primary-500 py-4 rounded-2xl active:opacity-90"
+              className="w-full py-4 rounded-2xl active:opacity-90"
+              style={{ backgroundColor: colors.accent }}
             >
               <HStack className="justify-center items-center" space="sm">
-                <MaterialIcons name="play-arrow" size={28} color="#1f2937" />
-                <Text className="font-bold text-lg text-gray-900">
+                <MaterialIcons name="play-arrow" size={28} color={colors.accentText} />
+                <Text className="font-bold text-lg" style={{ color: colors.accentText }}>
                   {t("session.startExercise")}
                 </Text>
               </HStack>
@@ -503,8 +512,13 @@ export default function WorkoutSessionScreen() {
                 className={`flex-1 py-4 rounded-2xl active:opacity-90 ${
                   currentExercise?.tutorial_url
                     ? "bg-blue-500/20 border border-blue-500"
-                    : "bg-gray-800 border border-gray-700"
+                    : ""
                 }`}
+                style={
+                  currentExercise?.tutorial_url
+                    ? undefined
+                    : { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1 }
+                }
               >
                 <HStack className="justify-center items-center" space="sm">
                   <MaterialIcons
@@ -514,8 +528,9 @@ export default function WorkoutSessionScreen() {
                   />
                   <Text
                     className={`font-bold ${
-                      currentExercise?.tutorial_url ? "text-blue-400" : "text-gray-500"
+                      currentExercise?.tutorial_url ? "text-blue-400" : ""
                     }`}
+                    style={!currentExercise?.tutorial_url ? { color: colors.textSubtle } : undefined}
                   >
                     {t("session.tutorial")}
                   </Text>
@@ -525,11 +540,12 @@ export default function WorkoutSessionScreen() {
 
             <RNPressable
               onPress={handleSkip}
-              className="w-full bg-gray-800 py-4 rounded-2xl active:opacity-90"
+              className="w-full py-4 rounded-2xl active:opacity-90"
+              style={{ backgroundColor: colors.surfaceAlt }}
             >
               <HStack className="justify-center items-center" space="sm">
-                <MaterialIcons name="skip-next" size={24} color="#9ca3af" />
-                <Text className="font-semibold text-gray-400">
+                <MaterialIcons name="skip-next" size={24} color={colors.icon} />
+                <Text className="font-semibold" style={{ color: colors.textMuted }}>
                   {session.phase === "rest" ? t("session.skipRest") : t("session.skipExercise")}
                 </Text>
               </HStack>

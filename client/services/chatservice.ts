@@ -112,10 +112,76 @@ type UserFitnessContext = {
   weight?: number | string;
   height?: number | string;
   age?: number | string;
+  gender?: "male" | "female" | "other";
   goals?: string;
+  weeklyAvgCalories?: number;
+  weeklyCalorieDelta?: number;
+  weeklyCalorieStatus?: "surplus" | "deficit" | "on_track";
+};
+
+const toNumber = (value?: number | string): number | null => {
+  if (value === undefined || value === null) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const calculateMaintenanceCalories = (
+  age?: number | string,
+  weightKg?: number | string,
+  heightCm?: number | string,
+  gender?: "male" | "female" | "other",
+): number | null => {
+  const parsedAge = toNumber(age);
+  const parsedWeight = toNumber(weightKg);
+  const parsedHeight = toNumber(heightCm);
+
+  if (!parsedAge || !parsedWeight || !parsedHeight) return null;
+
+  // Mifflin-St Jeor with low-activity multiplier.
+  const genderOffset =
+    gender === "female" ? -161 : gender === "male" ? 5 : -78;
+  const bmr = 10 * parsedWeight + 6.25 * parsedHeight - 5 * parsedAge + genderOffset;
+  return Math.round(bmr * 1.2);
+};
+
+const calculateBmi = (
+  weightKg?: number | string,
+  heightCm?: number | string,
+): number | null => {
+  const parsedWeight = toNumber(weightKg);
+  const parsedHeightCm = toNumber(heightCm);
+  if (!parsedWeight || !parsedHeightCm) return null;
+  const heightM = parsedHeightCm / 100;
+  if (heightM <= 0) return null;
+  return parsedWeight / (heightM * heightM);
 };
 
 export const getFitnessSystemPrompt = (user?: UserFitnessContext) => {
+  const maintenanceCalories = calculateMaintenanceCalories(
+    user?.age,
+    user?.weight,
+    user?.height,
+    user?.gender,
+  );
+  const cutCalories = maintenanceCalories
+    ? Math.max(1200, maintenanceCalories - 350)
+    : null;
+  const bulkCalories = maintenanceCalories
+    ? Math.max(1200, maintenanceCalories + 250)
+    : null;
+
+  const bmi = calculateBmi(user?.weight, user?.height);
+  const bmiCategory =
+    bmi === null
+      ? null
+      : bmi < 18.5
+        ? "underweight"
+        : bmi < 25
+          ? "normal"
+          : bmi < 30
+            ? "overweight"
+            : "obese";
+
   let prompt = `You are a helpful and knowledgeable fitness coach and nutritionist. 
 Your role is to provide personalized fitness advice, workout recommendations, nutrition guidance, and motivation.
 Keep your responses concise, practical, and encouraging. Focus on:
@@ -128,16 +194,48 @@ Always prioritize safety and recommend consulting healthcare professionals for m
 Never reveal chain-of-thought or reasoning traces. Do not output tags like <think> or </think>.`;
 
   if (user?.name || user?.weight || user?.height || user?.age || user?.goals) {
-  prompt += `\n\nUser Context:\n`;
+    prompt += `\n\nUser Context:\n`;
     if (user?.name) prompt += `- Name: ${user.name}\n`;
     if (user?.weight) prompt += `- Weight: ${user.weight} kg\n`;
     if (user?.height) prompt += `- Height: ${user.height} cm\n`;
     if (user?.age) prompt += `- Age: ${user.age}\n`;
+    if (user?.gender) prompt += `- Gender: ${user.gender}\n`;
     if (user?.goals) {
       prompt += `- Goal: ${user.goals.replace(/_/g, " ")}\n`;
     }
+    if (bmi !== null && bmiCategory) {
+      prompt += `- BMI: ${bmi.toFixed(1)} (${bmiCategory})\n`;
+    }
+    if (maintenanceCalories) {
+      prompt += `- Estimated maintenance calories: ${maintenanceCalories} kcal/day\n`;
+      prompt += `- Suggested fat-loss calories: ${cutCalories} kcal/day\n`;
+      prompt += `- Suggested muscle-gain calories: ${bulkCalories} kcal/day\n`;
+    }
+    if (typeof user?.weeklyAvgCalories === "number") {
+      prompt += `- Last 7-day average intake: ${user.weeklyAvgCalories} kcal/day\n`;
+    }
+    if (typeof user?.weeklyCalorieDelta === "number") {
+      prompt += `- Last 7-day average delta vs maintenance: ${user.weeklyCalorieDelta} kcal/day\n`;
+    }
+    if (user?.weeklyCalorieStatus) {
+      prompt += `- Last 7-day trend status: ${user.weeklyCalorieStatus}\n`;
+    }
     prompt +=
       "Use this profile context for personalized meal plans, workout plans, and habit advice.\n";
+    prompt +=
+      "When enough profile data exists, include a short health assessment (e.g., underweight/healthy range/overweight/obese based on BMI) and clear DO and DON'T bullets tailored to the user.\n";
+    prompt +=
+      "If the profile looks healthy, provide maintenance-focused habits to stay healthy.\n";
+    prompt +=
+      "If the profile suggests risk, give practical safe corrections (diet, training, recovery) and what to avoid.\n";
+    prompt +=
+      "When user asks calories/diet, explicitly reference maintenance, cut, and bulk targets from this context.\n";
+    prompt +=
+      "If BMI is overweight or obese, prioritize safe fat-loss guidance with a moderate calorie deficit, high-protein meals, and progressive activity.\n";
+    prompt +=
+      "If BMI is underweight, prioritize healthy surplus guidance and strength training.\n";
+    prompt +=
+      "If BMI is normal, align recommendations with the user's stated goal.\n";
   } else {
     prompt +=
       "\n\nNo profile data is available yet. Ask for age, weight, height, and goal before giving detailed plans.";

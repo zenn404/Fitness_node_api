@@ -84,10 +84,11 @@ class ApiService {
     name: string,
     email: string,
     password: string,
+    gender?: "male" | "female" | "other",
   ): Promise<ApiResponse<{ user: User; token: string }>> {
     return this.request("/api/auth/register", {
       method: "POST",
-      body: { name, email, password },
+      body: { name, email, password, gender },
     });
   }
 
@@ -107,7 +108,13 @@ class ApiService {
 
   async updateProfile(
     token: string,
-    data: { age?: number; weight?: number; height?: number; goals?: string },
+    data: {
+      age?: number;
+      weight?: number;
+      height?: number;
+      goals?: string;
+      gender?: "male" | "female" | "other";
+    },
   ): Promise<ApiResponse<{ user: User }>> {
     return this.request("/api/auth/profile", {
       method: "PUT",
@@ -190,26 +197,31 @@ class ApiService {
   }
 
   async getDailyLogs(
-    date: string
+    date: string,
+    token?: string,
   ): Promise<ApiResponse<{ logs: DailyLog[] }>> {
     const encoded = encodeURIComponent(date);
     return this.request(`/api/logs?date=${encoded}`, {
       method: "GET",
+      token,
     });
   }
 
   async createDailyLog(
-    payload: CreateDailyLogPayload
+    payload: CreateDailyLogPayload,
+    token?: string,
   ): Promise<ApiResponse<{ log: DailyLog }>> {
     return this.request("/api/logs", {
       method: "POST",
       body: payload,
+      token,
     });
   }
 
-  async deleteDailyLog(id: string): Promise<ApiResponse> {
+  async deleteDailyLog(id: string, token?: string): Promise<ApiResponse> {
     return this.request(`/api/logs/${id}`, {
       method: "DELETE",
+      token,
     });
   }
 
@@ -251,6 +263,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  gender?: "male" | "female" | "other";
   age?: number;
   weight?: number;
   height?: number;

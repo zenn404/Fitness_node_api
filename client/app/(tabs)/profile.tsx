@@ -1,7 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -27,16 +27,16 @@ import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import { changeLanguage } from "@/lib/i18n";
+import { getThemePalette } from "@/lib/theme-palette";
 import {
-  CalorieMode,
   FavoriteWorkout,
   ProfilePrefs,
   getProfilePrefs,
-  saveProfilePrefs,
   toggleFavoriteWorkout,
 } from "@/lib/profile-prefs";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
+import { AppTheme, useThemeStore } from "@/store/theme-store";
 
 const GOALS = [
   { id: "lose_weight", icon: "🔥", labelKey: "onboarding.goalLoseWeight" },
@@ -46,10 +46,6 @@ const GOALS = [
   { id: "flexibility", icon: "🧘", labelKey: "onboarding.goalFlexibility" },
   { id: "general_health", icon: "🍏", labelKey: "onboarding.goalHealth" },
 ];
-
-const CALORIE_MODES: CalorieMode[] = ["maintenance", "cut", "bulk"];
-
-const getCalorieModeKey = (mode: CalorieMode) => `profile.calorieMode.${mode}`;
 
 const getAchievementTier = (workouts: number) => {
   if (workouts >= 15) {
@@ -66,12 +62,16 @@ const getAchievementTier = (workouts: number) => {
 
 export default function ProfileScreen() {
   const { user, token, logout, isLoading, changePassword, deleteAccount } = useAuthStore();
+  const { theme, setTheme } = useThemeStore();
+  const isDark = theme === "dark";
+  const colors = getThemePalette(theme);
   const { t, i18n } = useTranslation();
   const [showEditSheet, setShowEditSheet] = useState(false);
   const [showAchievementSheet, setShowAchievementSheet] = useState(false);
-  const [showCalorieSheet, setShowCalorieSheet] = useState(false);
   const [showFavoritesSheet, setShowFavoritesSheet] = useState(false);
   const [showAccountSheet, setShowAccountSheet] = useState(false);
+  const [showLanguageSheet, setShowLanguageSheet] = useState(false);
+  const [showThemeSheet, setShowThemeSheet] = useState(false);
   const [totalWorkouts, setTotalWorkouts] = useState(0);
 
   const [prefs, setPrefs] = useState<ProfilePrefs>({
@@ -79,9 +79,6 @@ export default function ProfileScreen() {
     calorieTarget: undefined,
     favoriteWorkouts: [],
   });
-
-  const [calorieModeDraft, setCalorieModeDraft] = useState<CalorieMode>("maintenance");
-  const [calorieTargetDraft, setCalorieTargetDraft] = useState("");
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -127,56 +124,17 @@ export default function ProfileScreen() {
   };
 
   const handleLanguageSwitch = () => {
-    Alert.alert(t("profile.language"), "", [
-      {
-        text: t("profile.english"),
-        onPress: () => changeLanguage("en"),
-      },
-      {
-        text: t("profile.thai"),
-        onPress: () => changeLanguage("th"),
-      },
-      { text: t("common.cancel"), style: "cancel" },
-    ]);
+    setShowLanguageSheet(true);
   };
 
-  const handleOpenCalorie = () => {
-    setCalorieModeDraft(prefs.calorieMode);
-    setCalorieTargetDraft(
-      typeof prefs.calorieTarget === "number" ? String(prefs.calorieTarget) : "",
-    );
-    setShowCalorieSheet(true);
+  const handleThemeSwitch = () => {
+    setShowThemeSheet(true);
   };
 
-  const handleSaveCalorie = async () => {
-    let calorieTarget: number | undefined;
-
-    if (calorieTargetDraft.trim()) {
-      const parsed = parseInt(calorieTargetDraft, 10);
-      if (isNaN(parsed) || parsed < 800 || parsed > 6000) {
-        Alert.alert(t("common.error"), t("profile.calorieTargetInvalid"));
-        return;
-      }
-      calorieTarget = parsed;
-    }
-
-    const next: ProfilePrefs = {
-      ...prefs,
-      calorieMode: calorieModeDraft,
-      calorieTarget,
-    };
-    await saveProfilePrefs(next);
-    setPrefs(next);
-    setShowCalorieSheet(false);
+  const handleSelectTheme = async (nextTheme: AppTheme) => {
+    await setTheme(nextTheme);
+    setShowThemeSheet(false);
   };
-
-  const calorieSubtitle = useMemo(() => {
-    const modeLabel = t(getCalorieModeKey(prefs.calorieMode));
-    if (typeof prefs.calorieTarget === "number") {
-      return `${modeLabel} • ${prefs.calorieTarget} ${t("common.kcal")}`;
-    }
-    return `${modeLabel} • ${t("profile.notSet")}`;
-  }, [prefs.calorieMode, prefs.calorieTarget, t]);
 
   const handleRemoveFavorite = async (fav: FavoriteWorkout) => {
     const next = await toggleFavoriteWorkout(fav);
@@ -229,7 +187,13 @@ export default function ProfileScreen() {
   };
 
   const currentLanguageLabel =
-    i18n.language === "th" ? t("profile.thai") : t("profile.english");
+    i18n.language === "th"
+      ? t("profile.thai")
+      : i18n.language === "zh"
+        ? t("profile.chinese")
+        : t("profile.english");
+  const currentThemeLabel =
+    theme === "dark" ? t("profile.darkTheme") : t("profile.lightTheme");
 
   const goalLabel = GOALS.find((g) => g.id === user?.goals)?.labelKey || "";
   const currentTier = getAchievementTier(totalWorkouts);
@@ -245,25 +209,28 @@ export default function ProfileScreen() {
           : 100;
 
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
+    >
       <ScrollView
         className="flex-1 px-4"
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        <Heading size="2xl" className="mt-4 mb-6">
+        <Heading size="2xl" className="mt-4 mb-6" style={{ color: colors.text }}>
           {t("profile.title")}
         </Heading>
 
         <VStack className="items-center mb-8">
-          <Box className="justify-center items-center bg-primary-500 mb-4 rounded-full w-24 h-24">
-            <Text className="font-bold text-gray-900 text-4xl">
+          <Box className="justify-center items-center mb-4 rounded-full w-24 h-24" style={{ backgroundColor: colors.accent }}>
+            <Text className="font-bold text-4xl" style={{ color: colors.accentText }}>
               {user?.name?.charAt(0).toUpperCase() || "U"}
             </Text>
           </Box>
 
-          <Heading size="xl">{user?.name || "User"}</Heading>
+          <Heading size="xl" style={{ color: colors.text }}>{user?.name || "User"}</Heading>
 
-          <Text className="text-gray-400">
+          <Text style={{ color: colors.textMuted }}>
             {user?.email || t("profile.noEmail")}
           </Text>
 
@@ -271,21 +238,21 @@ export default function ProfileScreen() {
             <HStack space="lg" className="mt-4">
               <VStack className="items-center">
                 <Text className="font-bold text-lg">{user.age}</Text>
-                <Text className="text-gray-400 text-xs">
+                <Text className="text-xs" style={{ color: colors.textSubtle }}>
                   {t("profile.age")}
                 </Text>
               </VStack>
-              <Box className="bg-gray-700 w-px h-full" />
+              <Box className="w-px h-full" style={{ backgroundColor: colors.border }} />
               <VStack className="items-center">
                 <Text className="font-bold text-lg">{user.height} cm</Text>
-                <Text className="text-gray-400 text-xs">
+                <Text className="text-xs" style={{ color: colors.textSubtle }}>
                   {t("profile.height")}
                 </Text>
               </VStack>
-              <Box className="bg-gray-700 w-px h-full" />
+              <Box className="w-px h-full" style={{ backgroundColor: colors.border }} />
               <VStack className="items-center">
                 <Text className="font-bold text-lg">{user.weight} kg</Text>
-                <Text className="text-gray-400 text-xs">
+                <Text className="text-xs" style={{ color: colors.textSubtle }}>
                   {t("profile.weight")}
                 </Text>
               </VStack>
@@ -293,8 +260,8 @@ export default function ProfileScreen() {
           )}
 
           {goalLabel && (
-            <Box className="bg-primary-500/20 px-4 py-1.5 mt-3 rounded-full">
-              <Text className="text-primary-500 font-semibold text-sm">
+            <Box className="px-4 py-1.5 mt-3 rounded-full" style={{ backgroundColor: colors.accentSoft }}>
+              <Text className="font-semibold text-sm" style={{ color: colors.accent }}>
                 🎯 {t(goalLabel)}
               </Text>
             </Box>
@@ -314,12 +281,6 @@ export default function ProfileScreen() {
             onPress={() => setShowAchievementSheet(true)}
           />
           <MenuItem
-            icon="local-fire-department"
-            title={t("profile.calorieTarget")}
-            subtitle={calorieSubtitle}
-            onPress={handleOpenCalorie}
-          />
-          <MenuItem
             icon="favorite"
             title={t("profile.favoriteWorkouts")}
             subtitle={t("profile.favoriteCount", { count: prefs.favoriteWorkouts.length })}
@@ -329,6 +290,12 @@ export default function ProfileScreen() {
             icon="lock"
             title={t("profile.privacyAccount")}
             onPress={() => setShowAccountSheet(true)}
+          />
+          <MenuItem
+            icon="contrast"
+            title={t("profile.appearance")}
+            subtitle={currentThemeLabel}
+            onPress={handleThemeSwitch}
           />
           <MenuItem
             icon="language"
@@ -360,23 +327,23 @@ export default function ProfileScreen() {
         isOpen={showAchievementSheet}
         onClose={() => setShowAchievementSheet(false)}
       >
-        <ActionsheetBackdrop className="bg-black/60" />
-        <ActionsheetContent className="border-t border-gray-800 max-h-[80%]">
+        <ActionsheetBackdrop className="bg-black/50" />
+        <ActionsheetContent className="max-h-[80%]" style={{ backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1 }}>
           <ActionsheetDragIndicatorWrapper>
-            <ActionsheetDragIndicator className="bg-gray-600" />
+            <ActionsheetDragIndicator style={{ backgroundColor: colors.textSubtle }} />
           </ActionsheetDragIndicatorWrapper>
 
           <VStack className="w-full" space="md">
-            <Heading size="md">{t("profile.achievement")}</Heading>
+            <Heading size="md" style={{ color: colors.text }}>{t("profile.achievement")}</Heading>
 
-            <Box className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+            <Box className="border rounded-2xl p-4" style={{ backgroundColor: colors.surfaceAlt, borderColor: colors.border }}>
               <HStack className="items-center justify-between">
                 <VStack>
-                  <Text className="text-gray-400 text-xs">{t("profile.currentBadge")}</Text>
+                  <Text className="text-xs" style={{ color: colors.textSubtle }}>{t("profile.currentBadge")}</Text>
                   <Text className="font-semibold" style={{ color: currentTier.color }}>
                     {t(currentTier.labelKey)}
                   </Text>
-                  <Text className="text-gray-400 text-xs mt-1">
+                  <Text className="text-xs mt-1" style={{ color: colors.textSubtle }}>
                     {t("profile.totalWorkoutsCount", { count: totalWorkouts })}
                   </Text>
                 </VStack>
@@ -385,21 +352,24 @@ export default function ProfileScreen() {
             </Box>
 
             {nextMilestone ? (
-              <Box className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
-                <Text className="text-gray-400 text-xs mb-2">{t("profile.progressToNext")}</Text>
-                <Box className="h-2 bg-gray-800 rounded-full overflow-hidden">
+              <Box className="border rounded-2xl p-4" style={{ backgroundColor: colors.surfaceAlt, borderColor: colors.border }}>
+                <Text className="text-xs mb-2" style={{ color: colors.textSubtle }}>{t("profile.progressToNext")}</Text>
+                <Box className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: colors.surface }}>
                   <Box
-                    className="h-full bg-primary-500 rounded-full"
-                    style={{ width: `${Math.max(0, Math.min(100, progressPercent))}%` }}
+                    className="h-full rounded-full"
+                    style={{
+                      backgroundColor: colors.accent,
+                      width: `${Math.max(0, Math.min(100, progressPercent))}%`,
+                    }}
                   />
                 </Box>
-                <Text className="text-gray-400 text-xs mt-2">
+                <Text className="text-xs mt-2" style={{ color: colors.textSubtle }}>
                   {t("profile.nextMilestone", { count: nextMilestone })}
                 </Text>
               </Box>
             ) : (
-              <Box className="bg-gray-900 border border-primary-500/40 rounded-2xl p-4">
-                <Text className="text-primary-500 font-semibold text-center">
+              <Box className="border rounded-2xl p-4" style={{ backgroundColor: colors.surfaceAlt, borderColor: colors.accent }}>
+                <Text className="font-semibold text-center" style={{ color: colors.accent }}>
                   {t("profile.topTierUnlocked")}
                 </Text>
               </Box>
@@ -415,84 +385,26 @@ export default function ProfileScreen() {
         </ActionsheetContent>
       </Actionsheet>
 
-      <Actionsheet isOpen={showCalorieSheet} onClose={() => setShowCalorieSheet(false)}>
-        <ActionsheetBackdrop className="bg-black/60" />
-        <ActionsheetContent className="border-t border-gray-800">
-          <ActionsheetDragIndicatorWrapper>
-            <ActionsheetDragIndicator className="bg-gray-600" />
-          </ActionsheetDragIndicatorWrapper>
-
-          <VStack className="w-full" space="md">
-            <Heading size="md">{t("profile.calorieTarget")}</Heading>
-            <Text className="text-gray-400 text-sm">{t("profile.calorieTargetHelp")}</Text>
-
-            <VStack space="sm">
-              {CALORIE_MODES.map((mode) => {
-                const active = calorieModeDraft === mode;
-                return (
-                  <Pressable key={mode} onPress={() => setCalorieModeDraft(mode)}>
-                    <HStack
-                      className={`justify-between items-center rounded-xl p-3 border ${
-                        active ? "border-primary-500 bg-primary-500/10" : "border-gray-800 bg-gray-900"
-                      }`}
-                    >
-                      <Text className={active ? "text-primary-500 font-semibold" : "text-white"}>
-                        {t(getCalorieModeKey(mode))}
-                      </Text>
-                      {active && <MaterialIcons name="check" size={20} color="#C0EB6A" />}
-                    </HStack>
-                  </Pressable>
-                );
-              })}
-            </VStack>
-
-            <VStack space="xs">
-              <Text className="text-gray-400">{t("profile.dailyCalorieTarget")}</Text>
-              <Input size="xl">
-                <InputField
-                  placeholder={t("profile.dailyCaloriePlaceholder")}
-                  value={calorieTargetDraft}
-                  onChangeText={setCalorieTargetDraft}
-                  keyboardType="number-pad"
-                />
-              </Input>
-            </VStack>
-
-            <HStack space="sm">
-              <Button
-                variant="outline"
-                className="flex-1 border-gray-700"
-                onPress={() => setShowCalorieSheet(false)}
-              >
-                <ButtonText>{t("common.cancel")}</ButtonText>
-              </Button>
-              <Button className="flex-1" onPress={handleSaveCalorie}>
-                <ButtonText>{t("profile.save")}</ButtonText>
-              </Button>
-            </HStack>
-          </VStack>
-        </ActionsheetContent>
-      </Actionsheet>
-
       <Actionsheet isOpen={showFavoritesSheet} onClose={() => setShowFavoritesSheet(false)}>
-        <ActionsheetBackdrop className="bg-black/60" />
-        <ActionsheetContent className="border-t border-gray-800 max-h-[85%]">
+        <ActionsheetBackdrop className="bg-black/50" />
+        <ActionsheetContent className="max-h-[85%]" style={{ backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1 }}>
           <ActionsheetDragIndicatorWrapper>
-            <ActionsheetDragIndicator className="bg-gray-600" />
+            <ActionsheetDragIndicator style={{ backgroundColor: colors.textSubtle }} />
           </ActionsheetDragIndicatorWrapper>
 
           <VStack className="w-full" space="md">
-            <Heading size="md">{t("profile.favoriteWorkouts")}</Heading>
+            <Heading size="md" style={{ color: colors.text }}>{t("profile.favoriteWorkouts")}</Heading>
 
             {prefs.favoriteWorkouts.length === 0 ? (
-              <Text className="text-gray-400">{t("profile.noFavoriteWorkouts")}</Text>
+              <Text style={{ color: colors.textMuted }}>{t("profile.noFavoriteWorkouts")}</Text>
             ) : (
               <ScrollView className="w-full" contentContainerStyle={{ paddingBottom: 24 }}>
                 <VStack space="sm" className="w-full">
                   {prefs.favoriteWorkouts.map((fav) => (
                     <HStack
                       key={fav.id}
-                      className="items-center justify-between bg-gray-900 border border-gray-800 rounded-xl p-3"
+                      className="items-center justify-between border rounded-xl p-3"
+                      style={{ backgroundColor: colors.surfaceAlt, borderColor: colors.border }}
                     >
                       <Pressable
                         className="flex-1"
@@ -505,7 +417,7 @@ export default function ProfileScreen() {
                         }}
                       >
                         <Text className="font-semibold">{fav.name}</Text>
-                        <Text className="text-gray-400 text-xs">
+                        <Text className="text-xs" style={{ color: colors.textMuted }}>
                           {fav.difficulty}
                           {typeof fav.duration_minutes === "number"
                             ? ` • ${fav.duration_minutes} ${t("common.min")}`
@@ -513,7 +425,7 @@ export default function ProfileScreen() {
                         </Text>
                       </Pressable>
                       <Pressable onPress={() => handleRemoveFavorite(fav)}>
-                        <MaterialIcons name="delete-outline" size={22} color="#f87171" />
+                        <MaterialIcons name="delete-outline" size={22} color={colors.danger} />
                       </Pressable>
                     </HStack>
                   ))}
@@ -525,18 +437,18 @@ export default function ProfileScreen() {
       </Actionsheet>
 
       <Actionsheet isOpen={showAccountSheet} onClose={() => setShowAccountSheet(false)}>
-        <ActionsheetBackdrop className="bg-black/60" />
-        <ActionsheetContent className="border-t border-gray-800 max-h-[90%]">
+        <ActionsheetBackdrop className="bg-black/50" />
+        <ActionsheetContent className="max-h-[90%]" style={{ backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1 }}>
           <ActionsheetDragIndicatorWrapper>
-            <ActionsheetDragIndicator className="bg-gray-600" />
+            <ActionsheetDragIndicator style={{ backgroundColor: colors.textSubtle }} />
           </ActionsheetDragIndicatorWrapper>
 
           <ScrollView className="w-full" contentContainerStyle={{ paddingBottom: 28 }}>
             <VStack className="w-full" space="md">
-              <Heading size="md">{t("profile.privacyAccount")}</Heading>
+              <Heading size="md" style={{ color: colors.text }}>{t("profile.privacyAccount")}</Heading>
 
               <VStack space="xs">
-                <Text className="text-gray-400">{t("profile.currentPassword")}</Text>
+                <Text style={{ color: colors.textMuted }}>{t("profile.currentPassword")}</Text>
                 <Input size="xl">
                   <InputField
                     value={currentPassword}
@@ -549,7 +461,7 @@ export default function ProfileScreen() {
               </VStack>
 
               <VStack space="xs">
-                <Text className="text-gray-400">{t("profile.newPassword")}</Text>
+                <Text style={{ color: colors.textMuted }}>{t("profile.newPassword")}</Text>
                 <Input size="xl">
                   <InputField
                     value={newPassword}
@@ -562,7 +474,7 @@ export default function ProfileScreen() {
               </VStack>
 
               <VStack space="xs">
-                <Text className="text-gray-400">{t("profile.confirmNewPassword")}</Text>
+                <Text style={{ color: colors.textMuted }}>{t("profile.confirmNewPassword")}</Text>
                 <Input size="xl">
                   <InputField
                     value={confirmPassword}
@@ -578,8 +490,8 @@ export default function ProfileScreen() {
                 {isLoading ? <ButtonSpinner color="white" /> : <ButtonText>{t("profile.changePassword")}</ButtonText>}
               </Button>
 
-              <Box className="border-t border-gray-800 pt-4">
-                <Text className="text-gray-400 text-xs mb-2">{t("profile.deleteAccountWarning")}</Text>
+              <Box className="border-t pt-4" style={{ borderTopColor: colors.border }}>
+                <Text className="text-xs mb-2" style={{ color: colors.textMuted }}>{t("profile.deleteAccountWarning")}</Text>
                 <Button
                   className="bg-red-500"
                   onPress={handleDeleteAccount}
@@ -592,7 +504,149 @@ export default function ProfileScreen() {
           </ScrollView>
         </ActionsheetContent>
       </Actionsheet>
+
+      <Actionsheet
+        isOpen={showLanguageSheet}
+        onClose={() => setShowLanguageSheet(false)}
+      >
+        <ActionsheetBackdrop className="bg-black/50" />
+        <ActionsheetContent style={{ backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1 }}>
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator style={{ backgroundColor: colors.textSubtle }} />
+          </ActionsheetDragIndicatorWrapper>
+
+          <VStack className="w-full" space="md">
+            <Heading size="md" style={{ color: colors.text }}>{t("profile.language")}</Heading>
+            <Text className="text-sm" style={{ color: colors.textMuted }}>{t("profile.languageHelp")}</Text>
+
+            <LanguageOption
+              label={t("profile.english")}
+              subtitle="English"
+              selected={i18n.language === "en"}
+              onPress={async () => {
+                await changeLanguage("en");
+                setShowLanguageSheet(false);
+              }}
+            />
+            <LanguageOption
+              label={t("profile.thai")}
+              subtitle="ภาษาไทย"
+              selected={i18n.language === "th"}
+              onPress={async () => {
+                await changeLanguage("th");
+                setShowLanguageSheet(false);
+              }}
+            />
+            <LanguageOption
+              label={t("profile.chinese")}
+              subtitle="中文"
+              selected={i18n.language === "zh"}
+              onPress={async () => {
+                await changeLanguage("zh");
+                setShowLanguageSheet(false);
+              }}
+            />
+          </VStack>
+        </ActionsheetContent>
+      </Actionsheet>
+
+      <Actionsheet
+        isOpen={showThemeSheet}
+        onClose={() => setShowThemeSheet(false)}
+      >
+        <ActionsheetBackdrop className="bg-black/50" />
+        <ActionsheetContent style={{ backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1 }}>
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator style={{ backgroundColor: colors.textSubtle }} />
+          </ActionsheetDragIndicatorWrapper>
+
+          <VStack className="w-full" space="md">
+            <Heading size="md" style={{ color: colors.text }}>{t("profile.appearance")}</Heading>
+            <Text className="text-sm" style={{ color: colors.textMuted }}>{t("profile.appearanceHelp")}</Text>
+            <ThemeOption
+              label={t("profile.darkTheme")}
+              subtitle={t("profile.darkThemeDesc")}
+              selected={theme === "dark"}
+              onPress={() => handleSelectTheme("dark")}
+            />
+            <ThemeOption
+              label={t("profile.lightTheme")}
+              subtitle={t("profile.lightThemeDesc")}
+              selected={theme === "light"}
+              onPress={() => handleSelectTheme("light")}
+            />
+          </VStack>
+        </ActionsheetContent>
+      </Actionsheet>
     </SafeAreaView>
+  );
+}
+
+function LanguageOption({
+  label,
+  subtitle,
+  selected,
+  onPress,
+}: {
+  label: string;
+  subtitle: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
+  return (
+    <Pressable onPress={onPress}>
+      <HStack
+        className="items-center justify-between rounded-2xl border p-4"
+        style={{
+          borderColor: selected ? colors.accent : colors.border,
+          backgroundColor: selected ? colors.accentSoft : colors.surfaceAlt,
+        }}
+      >
+        <VStack>
+          <Text className="font-semibold" style={{ color: selected ? colors.accent : colors.text }}>
+            {label}
+          </Text>
+          <Text className="text-xs" style={{ color: colors.textMuted }}>{subtitle}</Text>
+        </VStack>
+        {selected && <MaterialIcons name="check-circle" size={22} color={colors.accent} />}
+      </HStack>
+    </Pressable>
+  );
+}
+
+function ThemeOption({
+  label,
+  subtitle,
+  selected,
+  onPress,
+}: {
+  label: string;
+  subtitle: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
+  return (
+    <Pressable onPress={onPress}>
+      <HStack
+        className="items-center justify-between rounded-2xl border p-4"
+        style={{
+          borderColor: selected ? colors.accent : colors.border,
+          backgroundColor: selected ? colors.accentSoft : colors.surfaceAlt,
+        }}
+      >
+        <VStack>
+          <Text className="font-semibold" style={{ color: selected ? colors.accent : colors.text }}>
+            {label}
+          </Text>
+          <Text className="text-xs" style={{ color: colors.textMuted }}>{subtitle}</Text>
+        </VStack>
+        {selected && <MaterialIcons name="check-circle" size={22} color={colors.accent} />}
+      </HStack>
+    </Pressable>
   );
 }
 
@@ -604,6 +658,8 @@ function EditProfileSheet({
   onClose: () => void;
 }) {
   const { user, updateProfile, isLoading } = useAuthStore();
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
   const { t } = useTranslation();
 
   const [name, setName] = useState(user?.name || "");
@@ -670,22 +726,22 @@ function EditProfileSheet({
 
   return (
     <Actionsheet isOpen={isOpen} onClose={onClose}>
-      <ActionsheetBackdrop className="bg-black/60" />
-      <ActionsheetContent className="border-t border-gray-800 max-h-[85%]">
+      <ActionsheetBackdrop className="bg-black/50" />
+      <ActionsheetContent className="max-h-[85%]" style={{ backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1 }}>
         <ActionsheetDragIndicatorWrapper>
-          <ActionsheetDragIndicator className="bg-gray-600" />
+          <ActionsheetDragIndicator style={{ backgroundColor: colors.textSubtle }} />
         </ActionsheetDragIndicatorWrapper>
 
         <HStack className="justify-between items-center w-full px-1 mb-4">
           <Pressable onPress={onClose}>
-            <Text className="text-gray-400">{t("common.cancel")}</Text>
+            <Text style={{ color: colors.textMuted }}>{t("common.cancel")}</Text>
           </Pressable>
-          <Heading size="md">{t("profile.editProfile")}</Heading>
+          <Heading size="md" style={{ color: colors.text }}>{t("profile.editProfile")}</Heading>
           <Pressable onPress={handleSave} disabled={isLoading}>
             {isLoading ? (
-              <ButtonSpinner color="#C0EB6A" />
+              <ButtonSpinner color={colors.accent} />
             ) : (
-              <Text className="text-primary-500 font-semibold">
+              <Text className="font-semibold" style={{ color: colors.accent }}>
                 {t("profile.save")}
               </Text>
             )}
@@ -704,7 +760,7 @@ function EditProfileSheet({
           >
             <VStack space="lg" className="w-full">
               <VStack space="xs">
-                <Text className="text-gray-400">{t("auth.fullName")}</Text>
+                <Text style={{ color: colors.textMuted }}>{t("auth.fullName")}</Text>
                 <Input size="xl">
                   <InputField
                     placeholder={t("auth.enterName")}
@@ -716,7 +772,7 @@ function EditProfileSheet({
               </VStack>
 
               <VStack space="xs">
-                <Text className="text-gray-400">{t("onboarding.age")}</Text>
+                <Text style={{ color: colors.textMuted }}>{t("onboarding.age")}</Text>
                 <Input size="xl">
                   <InputField
                     placeholder={t("onboarding.enterAge")}
@@ -728,7 +784,7 @@ function EditProfileSheet({
               </VStack>
 
               <VStack space="xs">
-                <Text className="text-gray-400">
+                <Text style={{ color: colors.textMuted }}>
                   {t("onboarding.height")} (cm)
                 </Text>
                 <Input size="xl">
@@ -742,7 +798,7 @@ function EditProfileSheet({
               </VStack>
 
               <VStack space="xs">
-                <Text className="text-gray-400">
+                <Text style={{ color: colors.textMuted }}>
                   {t("onboarding.weight")} (kg)
                 </Text>
                 <Input size="xl">
@@ -756,7 +812,7 @@ function EditProfileSheet({
               </VStack>
 
               <VStack space="xs">
-                <Text className="text-gray-400">
+                <Text style={{ color: colors.textMuted }}>
                   {t("profile.fitnessGoal")}
                 </Text>
                 <HStack className="flex-wrap justify-between">
@@ -770,18 +826,14 @@ function EditProfileSheet({
                         className="w-[48%] mb-3"
                       >
                         <Box
-                          className={`items-center p-3 rounded-2xl border-2 ${
-                            isSelected
-                              ? "bg-primary-500/20 border-primary-500"
-                              : "bg-gray-900 border-gray-800"
-                          }`}
+                          className="items-center p-3 rounded-2xl border-2"
+                          style={{
+                            backgroundColor: isSelected ? colors.accentSoft : colors.surfaceAlt,
+                            borderColor: isSelected ? colors.accent : colors.border,
+                          }}
                         >
                           <Text className="text-2xl mb-1">{goal.icon}</Text>
-                          <Text
-                            className={`text-center font-medium text-xs ${
-                              isSelected ? "text-primary-500" : "text-white"
-                            }`}
-                          >
+                          <Text className="text-center font-medium text-xs" style={{ color: isSelected ? colors.accent : colors.text }}>
                             {t(goal.labelKey)}
                           </Text>
                         </Box>
@@ -809,21 +861,23 @@ function MenuItem({
   subtitle?: string;
   onPress: () => void;
 }) {
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
   return (
     <Pressable onPress={onPress}>
-      <HStack className="justify-between items-center bg-gray-900 p-4 border border-gray-800 rounded-2xl">
+      <HStack className="justify-between items-center p-4 border rounded-2xl" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
         <HStack space="md" className="items-center">
-          <Box className="bg-gray-800 p-2 rounded-xl">
-            <MaterialIcons name={icon as any} size={22} color="#9ca3af" />
+          <Box className="p-2 rounded-xl" style={{ backgroundColor: colors.surfaceAlt }}>
+            <MaterialIcons name={icon as any} size={22} color={colors.icon} />
           </Box>
           <VStack>
-            <Text className="font-medium">{title}</Text>
+            <Text className="font-medium" style={{ color: colors.text }}>{title}</Text>
             {subtitle && (
-              <Text className="text-gray-400 text-sm">{subtitle}</Text>
+              <Text className="text-sm" style={{ color: colors.textMuted }}>{subtitle}</Text>
             )}
           </VStack>
         </HStack>
-        <MaterialIcons name="chevron-right" size={22} color="#6b7280" />
+        <MaterialIcons name="chevron-right" size={22} color={colors.textSubtle} />
       </HStack>
     </Pressable>
   );
@@ -838,13 +892,15 @@ function AchievementRule({
   label: string;
   rule: string;
 }) {
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
   return (
-    <HStack className="items-center justify-between bg-gray-900 border border-gray-800 rounded-xl p-3">
+    <HStack className="items-center justify-between border rounded-xl p-3" style={{ backgroundColor: colors.surfaceAlt, borderColor: colors.border }}>
       <HStack className="items-center" space="sm">
         <Text className="text-2xl">{icon}</Text>
         <VStack>
-          <Text className="font-semibold">{label}</Text>
-          <Text className="text-gray-400 text-xs">{rule}</Text>
+          <Text className="font-semibold" style={{ color: colors.text }}>{label}</Text>
+          <Text className="text-xs" style={{ color: colors.textMuted }}>{rule}</Text>
         </VStack>
       </HStack>
     </HStack>

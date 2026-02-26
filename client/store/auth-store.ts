@@ -17,7 +17,12 @@ interface AuthState {
 
   // Actions
   login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    gender?: "male" | "female" | "other",
+  ) => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   updateProfile: (data: {
@@ -25,6 +30,7 @@ interface AuthState {
     weight?: number;
     height?: number;
     goals?: string;
+    gender?: "male" | "female" | "other";
   }) => Promise<boolean>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   deleteAccount: () => Promise<boolean>;
@@ -79,11 +85,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (name: string, email: string, password: string) => {
+  register: async (
+    name: string,
+    email: string,
+    password: string,
+    gender?: "male" | "female" | "other",
+  ) => {
     set({ isLoading: true, error: null });
 
     try {
-      const response = await api.register(name, email, password);
+      const response = await api.register(name, email, password, gender);
 
       if (response.success && response.data) {
         const { user, token } = response.data;

@@ -11,7 +11,9 @@ import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import { getDifficultyColor } from "@/lib/utils";
 import { getProfilePrefs, isWorkoutFavorite, toggleFavoriteWorkout } from "@/lib/profile-prefs";
+import { getThemePalette } from "@/lib/theme-palette";
 import { Workout } from "@/services/api";
+import { useThemeStore } from "@/store/theme-store";
 import { useTranslation } from "react-i18next";
 
 interface WorkoutCardProps {
@@ -22,6 +24,8 @@ interface WorkoutCardProps {
 export function WorkoutCard({ workout, isRecommended = false }: WorkoutCardProps) {
   const { t } = useTranslation();
   const router = useRouter();
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
   const [isFavorite, setIsFavorite] = useState(false);
   const difficultyKey =
     workout.difficulty === "Beginner"
@@ -65,15 +69,17 @@ export function WorkoutCard({ workout, isRecommended = false }: WorkoutCardProps
   };
 
   return (
-    <Box className="bg-gray-900 p-4 border border-gray-800 rounded-2xl active:opacity-90">
-      {/* Header Row */}
+    <Box
+      className="p-4 border rounded-2xl active:opacity-90"
+      style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+    >
       <HStack className="justify-between items-start mb-2">
         <VStack className="flex-1 mr-3">
-          <Heading size="md" className="mb-1 text-white">
+          <Heading size="md" className="mb-1" style={{ color: colors.text }}>
             {workout.name}
           </Heading>
           {isRecommended && (
-            <Text className="text-primary-500 text-xs font-semibold mb-1">
+            <Text className="text-xs font-semibold mb-1" style={{ color: colors.accent }}>
               {t("workout.recommendedTag")}
             </Text>
           )}
@@ -86,41 +92,41 @@ export function WorkoutCard({ workout, isRecommended = false }: WorkoutCardProps
         </VStack>
         <RNPressable
           onPress={handleToggleFavorite}
-          className="bg-gray-800 p-2 rounded-xl active:opacity-80"
+          className="p-2 rounded-xl active:opacity-80"
+          style={{ backgroundColor: colors.surfaceAlt }}
         >
           <MaterialIcons
             name={isFavorite ? "favorite" : "favorite-border"}
             size={24}
-            color={isFavorite ? "#ef4444" : "#9ca3af"}
+            color={isFavorite ? colors.danger : colors.icon}
           />
         </RNPressable>
       </HStack>
 
-      {/* Description */}
       {workout.description && (
-        <Text className="mb-3 text-gray-400 text-sm" numberOfLines={2}>
+        <Text className="mb-3 text-sm" numberOfLines={2} style={{ color: colors.textMuted }}>
           {workout.description}
         </Text>
       )}
 
-      {/* Footer Row */}
       <HStack className="justify-between items-center">
-        {/* Duration */}
         <HStack space="xs" className="items-center">
-          <MaterialIcons name="schedule" size={16} color="#9ca3af" />
-          <Text className="text-gray-400 text-sm">
+          <MaterialIcons name="schedule" size={16} color={colors.icon} />
+          <Text className="text-sm" style={{ color: colors.textMuted }}>
             {workout.duration_minutes
               ? `${workout.duration_minutes} ${t("common.min")}`
               : `-- ${t("common.min")}`}
           </Text>
         </HStack>
 
-        {/* Start Button */}
         <RNPressable
           onPress={handlePress}
-          className="bg-primary-500 px-5 py-2 rounded-full active:opacity-80"
+          className="px-5 py-2 rounded-full active:opacity-80"
+          style={{ backgroundColor: colors.accent }}
         >
-          <Text className="font-bold text-gray-900">{t("common.start")}</Text>
+          <Text className="font-bold" style={{ color: colors.accentText }}>
+            {t("common.start")}
+          </Text>
         </RNPressable>
       </HStack>
     </Box>

@@ -3,26 +3,32 @@ import React from "react";
 import { Platform } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { getThemePalette } from "@/lib/theme-palette";
+import { useThemeStore } from "@/store/theme-store";
 
 export default function TabLayout() {
   const {t}=useTranslation();
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
   return (
     <Tabs
       screenOptions={{
-        sceneStyle: { backgroundColor: "#1f2937" },
-        tabBarActiveTintColor: "#c0eb6a",
-        tabBarInactiveTintColor: "#ffffff",
+        sceneStyle: { backgroundColor: colors.background },
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textSubtle,
         headerShown: false,
         tabBarStyle: Platform.select({
           ios: {
             position: "absolute",
-            backgroundColor: "#1f2937",
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
             height: 90,
             paddingBottom: 20,
             paddingTop: 10,
           },
           default: {
-            backgroundColor: "#1f2937",
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
             height: 70,
             paddingBottom: 10,
             paddingTop: 10,

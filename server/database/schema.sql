@@ -19,6 +19,7 @@ create table users (
   name text not null,
   email text unique not null,
   password text not null,
+  gender text check (gender in ('male', 'female', 'other')),
   age integer,
   weight decimal(5,2),
   height decimal(5,2),

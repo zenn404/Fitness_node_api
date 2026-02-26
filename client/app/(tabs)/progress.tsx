@@ -15,14 +15,26 @@ import { Heading } from "@/components/ui/heading";
 import { HStack } from "@/components/ui/hstack";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { getThemePalette } from "@/lib/theme-palette";
 import { Activity, api, ProgressData, WeeklyChartItem } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
+import { useThemeStore } from "@/store/theme-store";
 
 const CHART_HEIGHT = 180;
 const BAR_RADIUS = 6;
 const screenWidth = Dimensions.get("window").width;
 
-function WeeklyBarChart({ data }: { data: WeeklyChartItem[] }) {
+function WeeklyBarChart({
+  data,
+  trackColor,
+  activeColor,
+  labelColor,
+}: {
+  data: WeeklyChartItem[];
+  trackColor: string;
+  activeColor: string;
+  labelColor: string;
+}) {
   const chartWidth = screenWidth - 64;
   const maxWorkouts = Math.max(...data.map((d) => d.workouts), 1);
   const barWidth = (chartWidth - data.length * 8) / data.length;
@@ -47,7 +59,7 @@ function WeeklyBarChart({ data }: { data: WeeklyChartItem[] }) {
               height={CHART_HEIGHT - 20}
               rx={BAR_RADIUS}
               ry={BAR_RADIUS}
-              fill="#1f2937"
+              fill={trackColor}
             />
             {isActive && (
               <Rect
@@ -57,7 +69,7 @@ function WeeklyBarChart({ data }: { data: WeeklyChartItem[] }) {
                 height={barHeight}
                 rx={BAR_RADIUS}
                 ry={BAR_RADIUS}
-                fill="#C0EB6A"
+                fill={activeColor}
               />
             )}
             {isActive && (
@@ -66,7 +78,7 @@ function WeeklyBarChart({ data }: { data: WeeklyChartItem[] }) {
                 y={y - 6}
                 fontSize={11}
                 fontWeight="bold"
-                fill="#C0EB6A"
+                fill={activeColor}
                 textAnchor="middle"
               >
                 {item.workouts}
@@ -76,7 +88,7 @@ function WeeklyBarChart({ data }: { data: WeeklyChartItem[] }) {
               x={x + barWidth / 2}
               y={CHART_HEIGHT + 12}
               fontSize={11}
-              fill="#9ca3af"
+              fill={labelColor}
               textAnchor="middle"
             >
               {item.day}
@@ -88,7 +100,17 @@ function WeeklyBarChart({ data }: { data: WeeklyChartItem[] }) {
   );
 }
 
-function CaloriesBarChart({ data }: { data: WeeklyChartItem[] }) {
+function CaloriesBarChart({
+  data,
+  trackColor,
+  activeColor,
+  labelColor,
+}: {
+  data: WeeklyChartItem[];
+  trackColor: string;
+  activeColor: string;
+  labelColor: string;
+}) {
   const chartWidth = screenWidth - 64;
   const maxCalories = Math.max(...data.map((d) => d.calories), 1);
   const barWidth = (chartWidth - data.length * 8) / data.length;
@@ -113,7 +135,7 @@ function CaloriesBarChart({ data }: { data: WeeklyChartItem[] }) {
               height={CHART_HEIGHT - 20}
               rx={BAR_RADIUS}
               ry={BAR_RADIUS}
-              fill="#1f2937"
+              fill={trackColor}
             />
             {isActive && (
               <Rect
@@ -123,7 +145,7 @@ function CaloriesBarChart({ data }: { data: WeeklyChartItem[] }) {
                 height={barHeight}
                 rx={BAR_RADIUS}
                 ry={BAR_RADIUS}
-                fill="#f97316"
+                fill={activeColor}
               />
             )}
             {isActive && (
@@ -132,7 +154,7 @@ function CaloriesBarChart({ data }: { data: WeeklyChartItem[] }) {
                 y={y - 6}
                 fontSize={11}
                 fontWeight="bold"
-                fill="#f97316"
+                fill={activeColor}
                 textAnchor="middle"
               >
                 {item.calories}
@@ -142,7 +164,7 @@ function CaloriesBarChart({ data }: { data: WeeklyChartItem[] }) {
               x={x + barWidth / 2}
               y={CHART_HEIGHT + 12}
               fontSize={11}
-              fill="#9ca3af"
+              fill={labelColor}
               textAnchor="middle"
             >
               {item.day}
@@ -156,6 +178,8 @@ function CaloriesBarChart({ data }: { data: WeeklyChartItem[] }) {
 
 export default function ProgressScreen() {
   const { token } = useAuthStore();
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
   const [progressData, setProgressData] = useState<ProgressData | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -211,7 +235,7 @@ export default function ProgressScreen() {
     progressData?.weeklyChart.reduce((sum, d) => sum + d.minutes, 0) || 0;
 
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView
         className="flex-1 px-4"
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -219,35 +243,37 @@ export default function ProgressScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor="#C0EB6A"
-            colors={["#C0EB6A"]}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
           />
         }
       >
         <VStack className="mt-4 mb-6">
-          <Heading size="2xl">{t("progress.title")}</Heading>
-          <Text className="text-gray-400">{t("progress.trackJourney")}</Text>
+          <Heading size="2xl" style={{ color: colors.text }}>{t("progress.title")}</Heading>
+          <Text style={{ color: colors.textMuted }}>{t("progress.trackJourney")}</Text>
         </VStack>
 
         {isLoading && (
           <Box className="justify-center items-center py-10">
-            <ActivityIndicator size="large" color="#C0EB6A" />
+            <ActivityIndicator size="large" color={colors.accent} />
           </Box>
         )}
 
         {!isLoading && (
           <>
-            {/* Weekly Activity Chart */}
-            <Box className="bg-gray-900 mb-6 p-4 border border-gray-800 rounded-2xl">
+            <Box
+              className="mb-6 p-4 border rounded-2xl"
+              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+            >
               <HStack className="justify-between items-center mb-4">
                 <VStack>
-                  <Text className="text-gray-400 text-sm">
+                  <Text className="text-sm" style={{ color: colors.textMuted }}>
                     {t("progress.thisWeek")}
                   </Text>
-                  <Heading size="lg">{t("progress.weeklyActivity")}</Heading>
+                  <Heading size="lg" style={{ color: colors.text }}>{t("progress.weeklyActivity")}</Heading>
                 </VStack>
-                <Box className="bg-primary-500/20 px-3 py-1 rounded-full">
-                  <Text className="text-primary-500 font-semibold text-sm">
+                <Box className="px-3 py-1 rounded-full" style={{ backgroundColor: colors.accentSoft }}>
+                  <Text className="font-semibold text-sm" style={{ color: colors.accent }}>
                     {t("progress.workoutCount", { count: weeklyTotal })}
                   </Text>
                 </Box>
@@ -255,22 +281,29 @@ export default function ProgressScreen() {
 
               <Box className="items-center">
                 {progressData?.weeklyChart && (
-                  <WeeklyBarChart data={progressData.weeklyChart} />
+                  <WeeklyBarChart
+                    data={progressData.weeklyChart}
+                    trackColor={colors.surfaceAlt}
+                    activeColor={colors.accent}
+                    labelColor={colors.textSubtle}
+                  />
                 )}
               </Box>
             </Box>
 
-            {/* Calories Burned Chart */}
-            <Box className="bg-gray-900 mb-6 p-4 border border-gray-800 rounded-2xl">
+            <Box
+              className="mb-6 p-4 border rounded-2xl"
+              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+            >
               <HStack className="justify-between items-center mb-4">
                 <VStack>
-                  <Text className="text-gray-400 text-sm">
+                  <Text className="text-sm" style={{ color: colors.textMuted }}>
                     {t("progress.thisWeek")}
                   </Text>
-                  <Heading size="lg">{t("progress.caloriesBurned")}</Heading>
+                  <Heading size="lg" style={{ color: colors.text }}>{t("progress.caloriesBurned")}</Heading>
                 </VStack>
-                <Box className="bg-orange-500/20 px-3 py-1 rounded-full">
-                  <Text className="text-orange-500 font-semibold text-sm">
+                <Box className="px-3 py-1 rounded-full" style={{ backgroundColor: "rgba(249,115,22,0.18)" }}>
+                  <Text className="font-semibold text-sm" style={{ color: colors.warning }}>
                     {weeklyCalories} {t("common.kcal")}
                   </Text>
                 </Box>
@@ -278,14 +311,21 @@ export default function ProgressScreen() {
 
               <Box className="items-center">
                 {progressData?.weeklyChart && (
-                  <CaloriesBarChart data={progressData.weeklyChart} />
+                  <CaloriesBarChart
+                    data={progressData.weeklyChart}
+                    trackColor={colors.surfaceAlt}
+                    activeColor={colors.warning}
+                    labelColor={colors.textSubtle}
+                  />
                 )}
               </Box>
             </Box>
 
-            {/* All-Time Stats */}
-            <Box className="bg-gray-900 mb-6 p-4 border border-gray-800 rounded-2xl">
-              <Heading size="md" className="mb-3">
+            <Box
+              className="mb-6 p-4 border rounded-2xl"
+              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+            >
+              <Heading size="md" className="mb-3" style={{ color: colors.text }}>
                 {t("progress.allTimeStats")}
               </Heading>
               <VStack space="md">
@@ -294,13 +334,13 @@ export default function ProgressScreen() {
                     <MaterialIcons
                       name="fitness-center"
                       size={20}
-                      color="#C0EB6A"
+                      color={colors.accent}
                     />
-                    <Text className="text-gray-300">
+                    <Text style={{ color: colors.textMuted }}>
                       {t("progress.totalWorkouts")}
                     </Text>
                   </HStack>
-                  <Text className="font-bold text-lg">
+                  <Text className="font-bold text-lg" style={{ color: colors.text }}>
                     {progressData?.totalStats.workouts || 0}
                   </Text>
                 </HStack>
@@ -309,29 +349,60 @@ export default function ProgressScreen() {
                     <MaterialIcons
                       name="local-fire-department"
                       size={20}
-                      color="#f97316"
+                      color={colors.warning}
                     />
-                    <Text className="text-gray-300">
+                    <Text style={{ color: colors.textMuted }}>
                       {t("progress.totalCalories")}
                     </Text>
                   </HStack>
-                  <Text className="font-bold text-lg">
+                  <Text className="font-bold text-lg" style={{ color: colors.text }}>
                     {progressData?.totalStats.calories || 0} {t("common.kcal")}
                   </Text>
                 </HStack>
                 <HStack className="justify-between items-center">
                   <HStack className="items-center" space="sm">
-                    <MaterialIcons name="schedule" size={20} color="#3b82f6" />
-                    <Text className="text-gray-300">
+                    <MaterialIcons name="schedule" size={20} color={colors.info} />
+                    <Text style={{ color: colors.textMuted }}>
                       {t("progress.totalMinutes")}
                     </Text>
                   </HStack>
-                  <Text className="font-bold text-lg">
+                  <Text className="font-bold text-lg" style={{ color: colors.text }}>
                     {progressData?.totalStats.minutes || 0} {t("common.min")}
                   </Text>
                 </HStack>
               </VStack>
             </Box>
+
+            <Box
+              className="mb-6 p-4 border rounded-2xl"
+              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+            >
+              <HStack className="justify-between items-center">
+                <Heading size="md" style={{ color: colors.text }}>{t("progress.thisWeek")}</Heading>
+                <Text style={{ color: colors.textMuted }}>
+                  {weeklyMinutes} {t("common.min")}
+                </Text>
+              </HStack>
+            </Box>
+
+            {activities.length > 0 && (
+              <Box
+                className="mb-6 p-4 border rounded-2xl"
+                style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+              >
+                <Heading size="md" className="mb-3" style={{ color: colors.text }}>
+                  {t("home.recentActivity")}
+                </Heading>
+                <VStack space="sm">
+                  {activities.slice(0, 5).map((activity) => (
+                    <HStack key={activity.id} className="justify-between items-center">
+                      <Text className="flex-1" style={{ color: colors.textMuted }}>{activity.title}</Text>
+                      <Text style={{ color: colors.textSubtle }}>{activity.date}</Text>
+                    </HStack>
+                  ))}
+                </VStack>
+              </Box>
+            )}
           </>
         )}
       </ScrollView>

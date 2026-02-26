@@ -5,6 +5,13 @@ const USDA_SEARCH_URL = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${
 )}`;
 
 const isValidDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+const isMissingUserIdColumn = (error) =>
+  Boolean(
+    error &&
+      error.message &&
+      error.message.toLowerCase().includes("user_id") &&
+      error.message.toLowerCase().includes("column"),
+  );
 
 const toNumber = (value, field, required = false) => {
   if (value === undefined || value === null || value === "") {
@@ -294,11 +301,19 @@ const getLogs = async (req, res) => {
     const { data: logs, error } = await supabase
       .from("daily_logs")
       .select("*")
+      .eq("user_id", req.user.id)
       .eq("log_date", date)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Supabase error:", error);
+      if (isMissingUserIdColumn(error)) {
+        return res.status(500).json({
+          success: false,
+          message:
+            "daily_logs.user_id column is missing. Run migration 2026-02-26-add-gender-and-user-logs.sql.",
+        });
+      }
       return res.status(500).json({
         success: false,
         message: "Error fetching daily logs",
@@ -358,6 +373,7 @@ const createLog = async (req, res) => {
     try {
       payload = {
         name: name.trim(),
+        user_id: req.user.id,
         calories: toNumber(calories, "calories", true),
         protein: toNumber(protein, "protein"),
         carbs: toNumber(carbs, "carbs"),
@@ -382,6 +398,13 @@ const createLog = async (req, res) => {
 
     if (error) {
       console.error("Supabase error:", error);
+      if (isMissingUserIdColumn(error)) {
+        return res.status(500).json({
+          success: false,
+          message:
+            "daily_logs.user_id column is missing. Run migration 2026-02-26-add-gender-and-user-logs.sql.",
+        });
+      }
       return res.status(500).json({
         success: false,
         message: "Error creating daily log",
@@ -419,10 +442,21 @@ const deleteLog = async (req, res) => {
       });
     }
 
-    const { error } = await supabase.from("daily_logs").delete().eq("id", id);
+    const { error } = await supabase
+      .from("daily_logs")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", req.user.id);
 
     if (error) {
       console.error("Supabase error:", error);
+      if (isMissingUserIdColumn(error)) {
+        return res.status(500).json({
+          success: false,
+          message:
+            "daily_logs.user_id column is missing. Run migration 2026-02-26-add-gender-and-user-logs.sql.",
+        });
+      }
       return res.status(500).json({
         success: false,
         message: "Error deleting daily log",

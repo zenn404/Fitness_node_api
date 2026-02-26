@@ -5,12 +5,14 @@ import { initReactI18next } from "react-i18next";
 
 import en from "@/locales/en.json";
 import th from "@/locales/th.json";
+import zh from "@/locales/zh.json";
 
 const LANGUAGE_KEY = "@app_language";
 
 const resources = {
   en: { translation: en },
   th: { translation: th },
+  zh: { translation: zh },
 };
 
 const supportedLanguages = Object.keys(resources);

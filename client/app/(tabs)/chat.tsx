@@ -15,6 +15,8 @@ import { Heading } from "@/components/ui/heading";
 import { HStack } from "@/components/ui/hstack";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { getThemePalette } from "@/lib/theme-palette";
+import { api } from "@/services/api";
 import {
   ChatMessage,
   getFitnessSystemPrompt,
@@ -22,9 +24,38 @@ import {
 } from "@/services/chatservice";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/store/auth-store";
+import { useThemeStore } from "@/store/theme-store";
+
+const toLocalDateString = (date: Date) => {
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+};
+
+const getPastLocalDates = (days: number) => {
+  const today = new Date();
+  return Array.from({ length: days }, (_, i) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (days - 1 - i));
+    return toLocalDateString(date);
+  });
+};
+
+const calculateMaintenanceCalories = (
+  age?: number,
+  weightKg?: number,
+  heightCm?: number,
+  gender?: "male" | "female" | "other",
+) => {
+  if (!age || !weightKg || !heightCm) return null;
+  const genderOffset = gender === "female" ? -161 : gender === "male" ? 5 : -78;
+  const bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + genderOffset;
+  return Math.round(bmr * 1.2);
+};
 
 export default function ChatScreen() {
-  const {user} = useAuthStore();
+  const { user, token } = useAuthStore();
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
   const { t } = useTranslation();
   const flatListRef = useRef<FlatList>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -36,8 +67,25 @@ export default function ChatScreen() {
   ]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [weeklyAvgCalories, setWeeklyAvgCalories] = useState<number | null>(null);
+  const [weeklyCalorieDelta, setWeeklyCalorieDelta] = useState<number | null>(null);
+  const [weeklyCalorieStatus, setWeeklyCalorieStatus] = useState<
+    "surplus" | "deficit" | "on_track" | null
+  >(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    setMessages([
+      {
+        role: "assistant",
+        content: t("chat.greeting"),
+        timestamp: new Date(),
+      },
+    ]);
+    setWeeklyAvgCalories(null);
+    setWeeklyCalorieDelta(null);
+    setWeeklyCalorieStatus(null);
+  }, [user?.id, t]);
+
   useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => {
@@ -45,6 +93,48 @@ export default function ChatScreen() {
       }, 100);
     }
   }, [messages]);
+
+  useEffect(() => {
+    const loadWeeklyTrend = async () => {
+      if (!token) return;
+
+      const dates = getPastLocalDates(7);
+      try {
+        const responses = await Promise.all(
+          dates.map((date) => api.getDailyLogs(date, token)),
+        );
+        const totals = responses.map((response) => {
+          const logs = response.success && response.data ? response.data.logs || [] : [];
+          return logs.reduce((sum, log) => sum + Number(log.calories || 0), 0);
+        });
+        if (totals.length === 0) return;
+
+        const avg = Math.round(
+          totals.reduce((sum, value) => sum + value, 0) / totals.length,
+        );
+        const maintenance = calculateMaintenanceCalories(
+          user?.age,
+          user?.weight,
+          user?.height,
+          user?.gender,
+        );
+
+        setWeeklyAvgCalories(avg);
+
+        if (maintenance) {
+          const delta = avg - maintenance;
+          setWeeklyCalorieDelta(delta);
+          if (Math.abs(delta) <= 150) setWeeklyCalorieStatus("on_track");
+          else if (delta > 0) setWeeklyCalorieStatus("surplus");
+          else setWeeklyCalorieStatus("deficit");
+        }
+      } catch (error) {
+        console.error("Failed to load weekly calorie trend for chat context:", error);
+      }
+    };
+
+    loadWeeklyTrend();
+  }, [token, user?.age, user?.weight, user?.height]);
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
@@ -55,13 +145,11 @@ export default function ChatScreen() {
       timestamp: new Date(),
     };
 
-    // Add user message to chat
     setMessages((prev) => [...prev, userMessage]);
     setInputText("");
     setIsLoading(true);
 
     try {
-      // Send to Hugging Face AI
       const response = await sendChatMessage(
         [...messages, userMessage],
         getFitnessSystemPrompt({
@@ -70,11 +158,14 @@ export default function ChatScreen() {
           height: user?.height,
           age: user?.age,
           goals: user?.goals,
+          gender: user?.gender,
+          weeklyAvgCalories: weeklyAvgCalories ?? undefined,
+          weeklyCalorieDelta: weeklyCalorieDelta ?? undefined,
+          weeklyCalorieStatus: weeklyCalorieStatus ?? undefined,
         }),
       );
 
       if (response.error) {
-        // Add error message
         setMessages((prev) => [
           ...prev,
           {
@@ -84,7 +175,6 @@ export default function ChatScreen() {
           },
         ]);
       } else {
-        // Add AI response
         setMessages((prev) => [
           ...prev,
           {
@@ -118,12 +208,15 @@ export default function ChatScreen() {
         style={{ paddingHorizontal: 16 }}
       >
         <Box
-          className={`max-w-[80%] p-4 rounded-2xl ${
-            isUser ? "bg-primary-500" : "bg-gray-800 border border-gray-700"
-          }`}
+          className="max-w-[80%] p-4 rounded-2xl border"
+          style={{
+            backgroundColor: isUser ? colors.accent : colors.surface,
+            borderColor: isUser ? colors.accent : colors.border,
+          }}
         >
           <Text
-            className={`${isUser ? "text-white" : "text-gray-100"} text-base`}
+            className="text-base"
+            style={{ color: isUser ? colors.accentText : colors.text }}
           >
             {item.content}
           </Text>
@@ -133,19 +226,22 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-black" edges={["top"]}>
-      {/* Header */}
-      <Box className="border-b border-gray-800 px-4 py-3">
+    <SafeAreaView
+      className="flex-1"
+      edges={["top"]}
+      style={{ backgroundColor: colors.background }}
+    >
+      <Box className="border-b px-4 py-3" style={{ borderColor: colors.border }}>
         <HStack className="justify-between items-center">
           <HStack className="items-center" space="sm">
-            <Box className="bg-primary-500/20 p-2 rounded-xl">
-              <MaterialIcons name="chat" size={24} color="#10b981" />
+            <Box className="p-2 rounded-xl" style={{ backgroundColor: colors.accentSoft }}>
+              <MaterialIcons name="chat" size={24} color={colors.accent} />
             </Box>
             <VStack>
-              <Heading size="lg" className="text-white">
+              <Heading size="lg" style={{ color: colors.text }}>
                 {t("chat.aiCoach")}
               </Heading>
-              <Text className="text-gray-400 text-sm">
+              <Text className="text-sm" style={{ color: colors.textMuted }}>
                 {t("chat.poweredBy")}
               </Text>
             </VStack>
@@ -153,7 +249,6 @@ export default function ChatScreen() {
         </HStack>
       </Box>
 
-      {/* Messages */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -171,10 +266,11 @@ export default function ChatScreen() {
           showsVerticalScrollIndicator={false}
         />
 
-        {/* Input Area */}
         <Box
-          className="border-t border-gray-800 p-4 bg-black"
+          className="border-t p-4"
           style={{
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
             marginBottom: Platform.OS === "ios" ? 90 : 0,
           }}
         >
@@ -183,8 +279,13 @@ export default function ChatScreen() {
               value={inputText}
               onChangeText={setInputText}
               placeholder={t("chat.placeholder")}
-              placeholderTextColor="#6b7280"
-              className="flex-1 bg-gray-900 text-white px-4 py-3 rounded-2xl border border-gray-800"
+              placeholderTextColor={colors.textSubtle}
+              className="flex-1 px-4 py-3 rounded-2xl border"
+              style={{
+                backgroundColor: colors.inputBg,
+                borderColor: colors.border,
+                color: colors.text,
+              }}
               multiline
               maxLength={500}
               editable={!isLoading}
@@ -194,19 +295,19 @@ export default function ChatScreen() {
             <RNPressable
               onPress={handleSendMessage}
               disabled={isLoading || !inputText.trim()}
-              className={`p-3 rounded-2xl ${
-                isLoading || !inputText.trim()
-                  ? "bg-gray-800"
-                  : "bg-primary-500"
-              }`}
+              className="p-3 rounded-2xl"
+              style={{
+                backgroundColor:
+                  isLoading || !inputText.trim() ? colors.surfaceAlt : colors.accent,
+              }}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="white" />
+                <ActivityIndicator size="small" color={colors.text} />
               ) : (
                 <MaterialIcons
                   name="send"
                   size={24}
-                  color={!inputText.trim() ? "#6b7280" : "white"}
+                  color={!inputText.trim() ? colors.textSubtle : colors.accentText}
                 />
               )}
             </RNPressable>

@@ -4,12 +4,14 @@ create table public.users (
   email text unique not null,
   password text not null,
   name text not null,
+  gender text check (gender in ('male', 'female', 'other')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- Daily Logs table
 create table public.daily_logs (
   id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.users(id) on delete cascade not null,
   name text not null,
   calories numeric,
   protein numeric,

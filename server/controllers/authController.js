@@ -17,6 +17,22 @@ const generateToken = (user) => {
   });
 };
 
+const normalizeGender = (value) => {
+  if (!value) return undefined;
+  const normalized = String(value).toLowerCase();
+  return ["male", "female", "other"].includes(normalized)
+    ? normalized
+    : undefined;
+};
+
+const isMissingColumnError = (error, columnName) =>
+  Boolean(
+    error &&
+      error.message &&
+      error.message.toLowerCase().includes(`column`) &&
+      error.message.toLowerCase().includes(columnName.toLowerCase()),
+  );
+
 // Register new user
 const register = async (req, res) => {
   try {
@@ -28,7 +44,8 @@ const register = async (req, res) => {
       });
     }
 
-    const { email, password, name } = req.body;
+    const { email, password, name, gender } = req.body;
+    const normalizedGender = normalizeGender(gender);
 
     if (!email || !password || !name) {
       return res.status(400).json({
@@ -56,18 +73,36 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Create user in Supabase
-    const { data: newUser, error } = await supabase
+    let { data: newUser, error } = await supabase
       .from("users")
       .insert([
         {
           email,
           password: hashedPassword,
           name,
+          ...(normalizedGender ? { gender: normalizedGender } : {}),
           created_at: new Date().toISOString(),
         },
       ])
       .select()
       .single();
+
+    if (error && normalizedGender && isMissingColumnError(error, "gender")) {
+      const retry = await supabase
+        .from("users")
+        .insert([
+          {
+            email,
+            password: hashedPassword,
+            name,
+            created_at: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single();
+      newUser = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.error("Supabase error:", error);
@@ -203,11 +238,21 @@ const getProfile = async (req, res) => {
       });
     }
 
-    const { data: user, error } = await supabase
+    let { data: user, error } = await supabase
       .from("users")
-      .select("id, email, name, age, weight, height, goals, created_at")
+      .select("id, email, name, gender, age, weight, height, goals, created_at")
       .eq("id", req.user.id)
       .single();
+
+    if (error && isMissingColumnError(error, "gender")) {
+      const retry = await supabase
+        .from("users")
+        .select("id, email, name, age, weight, height, goals, created_at")
+        .eq("id", req.user.id)
+        .single();
+      user = retry.data;
+      error = retry.error;
+    }
 
     if (error || !user) {
       return res.status(404).json({
@@ -239,7 +284,8 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    const { name, email, age, weight, height, goals } = req.body;
+    const { name, email, age, weight, height, goals, gender } = req.body;
+    const normalizedGender = normalizeGender(gender);
     const updateData = {};
 
     if (name) updateData.name = name;
@@ -248,6 +294,7 @@ const updateProfile = async (req, res) => {
     if (weight !== undefined) updateData.weight = weight;
     if (height !== undefined) updateData.height = height;
     if (goals !== undefined) updateData.goals = goals;
+    if (gender !== undefined) updateData.gender = normalizedGender || null;
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
@@ -256,12 +303,25 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    const { data: user, error } = await supabase
+    let { data: user, error } = await supabase
       .from("users")
       .update(updateData)
       .eq("id", req.user.id)
-      .select("id, email, name, age, weight, height, goals, created_at")
+      .select("id, email, name, gender, age, weight, height, goals, created_at")
       .single();
+
+    if (error && isMissingColumnError(error, "gender")) {
+      const fallbackUpdate = { ...updateData };
+      delete fallbackUpdate.gender;
+      const retry = await supabase
+        .from("users")
+        .update(fallbackUpdate)
+        .eq("id", req.user.id)
+        .select("id, email, name, age, weight, height, goals, created_at")
+        .single();
+      user = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       return res.status(500).json({
