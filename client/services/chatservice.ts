@@ -2,13 +2,34 @@ import { HfInference } from "@huggingface/inference";
 
 const hfKey = process.env.EXPO_PUBLIC_HUGGINGFACE_API_KEY;
 const hfModel =
-  process.env.EXPO_PUBLIC_HUGGINGFACE_MODEL || "Qwen/Qwen2.5-72B-Instruct";
+  process.env.EXPO_PUBLIC_HUGGINGFACE_MODEL || "Qwen/Qwen2.5-7B-Instruct";
+const hfFallbackModels = [
+  hfModel,
+  "meta-llama/Llama-3.1-8B-Instruct",
+  "mistralai/Mistral-7B-Instruct-v0.3",
+];
 
 if (!hfKey) {
   console.error("Hugging Face API key not found in environment variables");
 }
 
 const hf = new HfInference(hfKey);
+
+const normalizeHfError = (error: any): string => {
+  const message = error?.message || "Failed to get response from Hugging Face AI";
+  const lower = String(message).toLowerCase();
+
+  if (lower.includes("401") || lower.includes("unauthorized")) {
+    return "Invalid Hugging Face API key. Update EXPO_PUBLIC_HUGGINGFACE_API_KEY.";
+  }
+  if (lower.includes("429") || lower.includes("rate") || lower.includes("quota")) {
+    return "Hugging Face rate limit/quota reached. Try again later.";
+  }
+  if (lower.includes("model") && (lower.includes("not found") || lower.includes("does not exist"))) {
+    return "Configured Hugging Face model is unavailable.";
+  }
+  return message;
+};
 
 function sanitizeAssistantReply(text: string): string {
   const withoutThinkBlocks = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
@@ -31,6 +52,13 @@ export async function sendChatMessage(
   messages: ChatMessage[],
   systemPrompt?: string,
 ): Promise<ChatResponse> {
+  if (!hfKey) {
+    return {
+      message: "",
+      error: "Hugging Face API key is missing. Set EXPO_PUBLIC_HUGGINGFACE_API_KEY in client/.env.",
+    };
+  }
+
   try {
     const chatMessages: { role: "system" | "user" | "assistant"; content: string }[] = [];
 
@@ -53,12 +81,28 @@ export async function sendChatMessage(
       });
     });
 
-    const response = await hf.chatCompletion({
-      model: hfModel,
-      messages: chatMessages,
-      max_tokens: 1100,
-      temperature: 0.7,
-    });
+    let response: Awaited<ReturnType<typeof hf.chatCompletion>> | null = null;
+    let usedModel = hfModel;
+    let lastError: any = null;
+
+    for (const model of hfFallbackModels) {
+      try {
+        response = await hf.chatCompletion({
+          model,
+          messages: chatMessages,
+          max_tokens: 1100,
+          temperature: 0.7,
+        });
+        usedModel = model;
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!response) {
+      throw lastError || new Error("No response from Hugging Face");
+    }
 
     const rawResponseMessage = response.choices[0]?.message?.content || "";
     const responseMessage = sanitizeAssistantReply(rawResponseMessage);
@@ -70,7 +114,7 @@ export async function sendChatMessage(
 
     if (finishReason === "length") {
       const continuation = await hf.chatCompletion({
-        model: hfModel,
+        model: usedModel,
         messages: [
           ...chatMessages,
           { role: "assistant", content: responseMessage },
@@ -99,7 +143,7 @@ export async function sendChatMessage(
     console.error("Hugging Face API Error:", error);
     return {
       message: "",
-      error: error.message || "Failed to get response from Hugging Face AI",
+      error: normalizeHfError(error),
     };
   }
 }

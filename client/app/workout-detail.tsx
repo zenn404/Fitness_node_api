@@ -14,6 +14,7 @@ import { HStack } from "@/components/ui/hstack";
 import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { SectionCard } from "@/components/app/design";
 import { getThemePalette } from "@/lib/theme-palette";
 import { getDifficultyColor } from "@/lib/utils";
 import { api, Workout } from "@/services/api";
@@ -105,7 +106,7 @@ export default function WorkoutDetailScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* Header with Back Button */}
-        <HStack className="px-4 py-3 items-center">
+        <HStack className="px-5 py-3 items-center">
           <Pressable
             onPress={() => router.back()}
             className="mr-3 p-2 active:opacity-70"
@@ -142,7 +143,7 @@ export default function WorkoutDetailScreen() {
         {!isLoading && workout && (
           <VStack className="px-4 mt-4" space="lg">
             {/* Workout Header Card */}
-            <Box className="p-6 border rounded-3xl" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+            <SectionCard className="p-6">
               <VStack space="md">
                 {/* Title and Difficulty */}
                 <VStack space="sm">
@@ -193,22 +194,22 @@ export default function WorkoutDetailScreen() {
                   </HStack>
                 </HStack>
               </VStack>
-            </Box>
+            </SectionCard>
 
             {/* Description Section */}
             {workout.description && (
-              <Box className="p-5 border rounded-2xl" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+              <SectionCard className="p-5">
                 <Heading size="sm" className="mb-3" style={{ color: colors.text }}>
                   {t("workout.about")}
                 </Heading>
                 <Text className="leading-6" style={{ color: colors.textMuted }}>
                   {workout.description}
                 </Text>
-              </Box>
+              </SectionCard>
             )}
 
             {/* Exercises Section */}
-            <Box className="p-5 border rounded-2xl" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+            <SectionCard className="p-5">
               <Heading size="sm" className="mb-4" style={{ color: colors.text }}>
                 {t("workout.exercises")}
               </Heading>
@@ -301,7 +302,7 @@ export default function WorkoutDetailScreen() {
                   </HStack>
                 </Box>
               )}
-            </Box>
+            </SectionCard>
           </VStack>
         )}
 

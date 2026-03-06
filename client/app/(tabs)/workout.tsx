@@ -3,18 +3,17 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
-  Pressable as RNPressable,
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { Box } from "@/components/ui/box";
-import { Heading } from "@/components/ui/heading";
 import { Input, InputField } from "@/components/ui/input";
 import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { AppChipButton, PageHeader, SectionCard } from "@/components/app/design";
 import { scoreWorkoutForGoal, sortWorkoutsForGoal } from "@/lib/goal-recommendations";
 import { getThemePalette } from "@/lib/theme-palette";
 import { api, Workout } from "@/services/api";
@@ -112,21 +111,23 @@ export default function WorkoutScreen() {
           />
         }
       >
-        <VStack className="mt-4 mb-6">
-          <Heading size="2xl" style={{ color: colors.text }}>{t("workout.title")}</Heading>
-          <Text className="mt-1" style={{ color: colors.textMuted }}>
-            {!isLoading &&
-              t("workout.workoutsAvailable", { count: workouts.length })}
+        <PageHeader
+          title={t("workout.title")}
+          subtitle={
+            !isLoading
+              ? t("workout.workoutsAvailable", { count: workouts.length })
+              : undefined
+          }
+          icon="fitness-center"
+        />
+        {user?.goals && (
+          <Text className="text-xs -mt-4 mb-4" style={{ color: colors.accent }}>
+            {t("workout.recommendedByGoal")}
           </Text>
-          {user?.goals && (
-            <Text className="text-xs mt-1" style={{ color: colors.accent }}>
-              {t("workout.recommendedByGoal")}
-            </Text>
-          )}
-        </VStack>
+        )}
 
         {!isLoading && workouts.length > 0 && (
-          <Box className="mb-4">
+          <SectionCard className="mb-4">
             <Input size="lg" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
               <InputField
                 value={searchQuery}
@@ -135,7 +136,7 @@ export default function WorkoutScreen() {
                 autoCapitalize="none"
               />
             </Input>
-          </Box>
+          </SectionCard>
         )}
 
         {!isLoading && workouts.length > 0 && (
@@ -145,22 +146,22 @@ export default function WorkoutScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 8 }}
             >
-              <DifficultyChip
+              <AppChipButton
                 label={t("workout.all")}
                 isActive={selectedDifficulty === "All"}
                 onPress={() => setSelectedDifficulty("All")}
               />
-              <DifficultyChip
+              <AppChipButton
                 label={t("workout.beginner")}
                 isActive={selectedDifficulty === "Beginner"}
                 onPress={() => setSelectedDifficulty("Beginner")}
               />
-              <DifficultyChip
+              <AppChipButton
                 label={t("workout.intermediate")}
                 isActive={selectedDifficulty === "Intermediate"}
                 onPress={() => setSelectedDifficulty("Intermediate")}
               />
-              <DifficultyChip
+              <AppChipButton
                 label={t("workout.advanced")}
                 isActive={selectedDifficulty === "Advanced"}
                 onPress={() => setSelectedDifficulty("Advanced")}
@@ -232,36 +233,5 @@ export default function WorkoutScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function DifficultyChip({
-  label,
-  isActive,
-  onPress,
-}: {
-  label: string;
-  isActive: boolean;
-  onPress: () => void;
-}) {
-  const { theme } = useThemeStore();
-  const colors = getThemePalette(theme);
-
-  return (
-    <RNPressable
-      onPress={onPress}
-      className="px-4 py-2 rounded-full border"
-      style={{
-        backgroundColor: isActive ? colors.accent : colors.surface,
-        borderColor: isActive ? colors.accent : colors.border,
-      }}
-    >
-      <Text
-        className="font-semibold"
-        style={{ color: isActive ? colors.accentText : colors.textMuted }}
-      >
-        {label}
-      </Text>
-    </RNPressable>
   );
 }

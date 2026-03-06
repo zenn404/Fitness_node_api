@@ -18,6 +18,7 @@ import { Input, InputField } from "@/components/ui/input";
 import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { AppTable, FormLabel, PageHeader, SectionCard } from "@/components/app/design";
 import { getThemePalette } from "@/lib/theme-palette";
 import {
   api,
@@ -326,14 +327,15 @@ export default function NutritionScreen() {
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 120 }}>
-        <VStack className="mt-4 mb-6" space="xs">
-          <Heading size="2xl" style={{ color: colors.text }}>{t("nutrition.title")}</Heading>
-          <Text style={{ color: colors.textMuted }}>{t("nutrition.subtitle")}</Text>
-        </VStack>
+        <PageHeader
+          title={t("nutrition.title")}
+          subtitle={t("nutrition.subtitle")}
+          icon="restaurant-menu"
+        />
 
-        <Box className="border rounded-2xl p-4 mb-6" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+        <SectionCard className="mb-6">
           <VStack space="md">
-            <Text className="text-sm" style={{ color: colors.textMuted }}>{t("nutrition.searchFood")}</Text>
+            <FormLabel>{t("nutrition.searchFood")}</FormLabel>
             <HStack space="sm" className="items-center">
               <Box className="flex-1">
                 <Input size="lg">
@@ -355,7 +357,7 @@ export default function NutritionScreen() {
             </HStack>
 
             <HStack className="items-center justify-between">
-              <Text className="text-sm" style={{ color: colors.textMuted }}>{t("nutrition.logDate")}</Text>
+              <FormLabel>{t("nutrition.logDate")}</FormLabel>
               <HStack space="sm" className="items-center">
                 <Pressable
                   className="p-2 rounded-full"
@@ -381,7 +383,7 @@ export default function NutritionScreen() {
               </HStack>
             </HStack>
           </VStack>
-        </Box>
+        </SectionCard>
 
         {errorMessage && (
           <Box className="border rounded-xl p-3 mb-6" style={{ backgroundColor: colors.dangerSoft, borderColor: colors.danger }}>
@@ -404,11 +406,11 @@ export default function NutritionScreen() {
           )}
 
           {!isSearching && results.length === 0 && (
-            <Box className="border rounded-2xl p-4" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+            <SectionCard>
               <Text style={{ color: colors.textMuted }}>
                 {t("nutrition.searchFoodsHint")}
               </Text>
-            </Box>
+            </SectionCard>
           )}
 
           {!isSearching && results.length > 0 && (
@@ -416,7 +418,7 @@ export default function NutritionScreen() {
               {results.map((item, index) => {
                 const key = `${item.name}-${index}`;
                 return (
-                  <Box key={key} className="border rounded-2xl p-4" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+                  <SectionCard key={key}>
                     <HStack className="justify-between items-center mb-2">
                       <VStack className="flex-1" space="xs">
                         <Heading size="sm" className="capitalize" style={{ color: colors.text }}>
@@ -440,11 +442,15 @@ export default function NutritionScreen() {
                         )}
                       </Button>
                     </HStack>
-                    <NutritionRow label={t("nutrition.calories")} value={formatNumber(item.calories, 0)} />
-                    <NutritionRow label={t("nutrition.protein")} value={`${formatNumber(item.protein_g)} g`} />
-                    <NutritionRow label={t("nutrition.carbs")} value={`${formatNumber(item.carbohydrates_total_g)} g`} />
-                    <NutritionRow label={t("nutrition.fat")} value={`${formatNumber(item.fat_total_g)} g`} />
-                  </Box>
+                    <AppTable
+                      rows={[
+                        { label: t("nutrition.calories"), value: formatNumber(item.calories, 0) },
+                        { label: t("nutrition.protein"), value: `${formatNumber(item.protein_g)} g` },
+                        { label: t("nutrition.carbs"), value: `${formatNumber(item.carbohydrates_total_g)} g` },
+                        { label: t("nutrition.fat"), value: `${formatNumber(item.fat_total_g)} g` },
+                      ]}
+                    />
+                  </SectionCard>
                 );
               })}
             </VStack>
@@ -464,17 +470,17 @@ export default function NutritionScreen() {
           )}
 
           {!isLoadingLogs && logs.length === 0 && (
-            <Box className="border rounded-2xl p-4" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+            <SectionCard>
               <Text style={{ color: colors.textMuted }}>
                 {t("nutrition.noEntriesYet")}
               </Text>
-            </Box>
+            </SectionCard>
           )}
 
           {!isLoadingLogs && logs.length > 0 && (
             <VStack space="md">
               {logs.map((log) => (
-                <Box key={log.id} className="border rounded-2xl p-4" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+                <SectionCard key={log.id}>
                   <HStack className="items-center justify-between mb-2">
                     <Heading size="sm" className="capitalize" style={{ color: colors.text }}>
                       {log.name}
@@ -487,29 +493,37 @@ export default function NutritionScreen() {
                       <MaterialIcons name="delete" size={18} color={colors.danger} />
                     </Pressable>
                   </HStack>
-                  <NutritionRow label={t("nutrition.calories")} value={formatNumber(log.calories, 0)} />
-                  <NutritionRow label={t("nutrition.protein")} value={`${formatNumber(log.protein)} g`} />
-                  <NutritionRow label={t("nutrition.carbs")} value={`${formatNumber(log.carbs)} g`} />
-                  <NutritionRow label={t("nutrition.fat")} value={`${formatNumber(log.fat)} g`} />
-                  <NutritionRow label={t("nutrition.serving")} value={`${formatNumber(log.serving_size, 0)} g`} />
-                </Box>
+                  <AppTable
+                    rows={[
+                      { label: t("nutrition.calories"), value: formatNumber(log.calories, 0) },
+                      { label: t("nutrition.protein"), value: `${formatNumber(log.protein)} g` },
+                      { label: t("nutrition.carbs"), value: `${formatNumber(log.carbs)} g` },
+                      { label: t("nutrition.fat"), value: `${formatNumber(log.fat)} g` },
+                      { label: t("nutrition.serving"), value: `${formatNumber(log.serving_size, 0)} g` },
+                    ]}
+                  />
+                </SectionCard>
               ))}
             </VStack>
           )}
         </Box>
 
-        <Box className="border rounded-2xl p-4 mb-6" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+        <SectionCard className="mb-6">
           <HStack className="items-center justify-between mb-3">
             <Heading size="md" style={{ color: colors.text }}>{t("nutrition.dailySummary")}</Heading>
             <Text className="text-xs" style={{ color: colors.textMuted }}>{t("nutrition.totals")}</Text>
           </HStack>
-          <SummaryRow label={t("nutrition.calories")} value={formatNumber(totals.calories, 0)} />
-          <SummaryRow label={t("nutrition.protein")} value={`${formatNumber(totals.protein)} g`} />
-          <SummaryRow label={t("nutrition.carbs")} value={`${formatNumber(totals.carbs)} g`} />
-          <SummaryRow label={t("nutrition.fat")} value={`${formatNumber(totals.fat)} g`} />
-        </Box>
+          <AppTable
+            rows={[
+              { label: t("nutrition.calories"), value: formatNumber(totals.calories, 0) },
+              { label: t("nutrition.protein"), value: `${formatNumber(totals.protein)} g` },
+              { label: t("nutrition.carbs"), value: `${formatNumber(totals.carbs)} g` },
+              { label: t("nutrition.fat"), value: `${formatNumber(totals.fat)} g` },
+            ]}
+          />
+        </SectionCard>
 
-        <Box className="border rounded-2xl p-4" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+        <SectionCard>
           <HStack className="items-center justify-between mb-3">
             <Heading size="md" style={{ color: colors.text }}>{t("nutrition.macrosChart")}</Heading>
             <Text className="text-xs" style={{ color: colors.textMuted }}>{t("nutrition.dailyTotals")}</Text>
@@ -523,32 +537,8 @@ export default function NutritionScreen() {
             tooltipBorder={colors.border}
             tooltipText={colors.text}
           />
-        </Box>
+        </SectionCard>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function NutritionRow({ label, value }: { label: string; value: string }) {
-  const { theme } = useThemeStore();
-  const colors = getThemePalette(theme);
-
-  return (
-    <HStack className="justify-between">
-      <Text className="text-xs" style={{ color: colors.textSubtle }}>{label}</Text>
-      <Text className="text-xs" style={{ color: colors.textMuted }}>{value}</Text>
-    </HStack>
-  );
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  const { theme } = useThemeStore();
-  const colors = getThemePalette(theme);
-
-  return (
-    <HStack className="justify-between mb-2">
-      <Text className="text-xs" style={{ color: colors.textMuted }}>{label}</Text>
-      <Text className="text-xs" style={{ color: colors.text }}>{value}</Text>
-    </HStack>
   );
 }

@@ -13,6 +13,14 @@ const isMissingUserIdColumn = (error) =>
       error.message.toLowerCase().includes("column"),
   );
 
+const isMissingDailyLogsTable = (error) =>
+  Boolean(
+    error &&
+      error.code === "PGRST205" &&
+      error.message &&
+      error.message.toLowerCase().includes("public.daily_logs"),
+  );
+
 const toNumber = (value, field, required = false) => {
   if (value === undefined || value === null || value === "") {
     if (required) {
@@ -306,14 +314,16 @@ const getLogs = async (req, res) => {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Supabase error:", error);
-      if (isMissingUserIdColumn(error)) {
-        return res.status(500).json({
-          success: false,
+      if (isMissingUserIdColumn(error) || isMissingDailyLogsTable(error)) {
+        return res.json({
+          success: true,
+          data: { logs: [] },
+          count: 0,
           message:
-            "daily_logs.user_id column is missing. Run migration 2026-02-26-add-gender-and-user-logs.sql.",
+            "daily_logs schema is missing; returning empty logs. Run migration server/database/2026-02-26-add-gender-and-user-logs.sql.",
         });
       }
+      console.error("Supabase error:", error);
       return res.status(500).json({
         success: false,
         message: "Error fetching daily logs",
@@ -397,14 +407,14 @@ const createLog = async (req, res) => {
       .single();
 
     if (error) {
-      console.error("Supabase error:", error);
-      if (isMissingUserIdColumn(error)) {
-        return res.status(500).json({
+      if (isMissingUserIdColumn(error) || isMissingDailyLogsTable(error)) {
+        return res.status(503).json({
           success: false,
           message:
-            "daily_logs.user_id column is missing. Run migration 2026-02-26-add-gender-and-user-logs.sql.",
+            "daily_logs schema is missing. Please run migration server/database/2026-02-26-add-gender-and-user-logs.sql.",
         });
       }
+      console.error("Supabase error:", error);
       return res.status(500).json({
         success: false,
         message: "Error creating daily log",
@@ -449,14 +459,14 @@ const deleteLog = async (req, res) => {
       .eq("user_id", req.user.id);
 
     if (error) {
-      console.error("Supabase error:", error);
-      if (isMissingUserIdColumn(error)) {
-        return res.status(500).json({
+      if (isMissingUserIdColumn(error) || isMissingDailyLogsTable(error)) {
+        return res.status(503).json({
           success: false,
           message:
-            "daily_logs.user_id column is missing. Run migration 2026-02-26-add-gender-and-user-logs.sql.",
+            "daily_logs schema is missing. Please run migration server/database/2026-02-26-add-gender-and-user-logs.sql.",
         });
       }
+      console.error("Supabase error:", error);
       return res.status(500).json({
         success: false,
         message: "Error deleting daily log",

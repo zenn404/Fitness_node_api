@@ -4,7 +4,7 @@ import { tva } from '@gluestack-ui/utils/nativewind-utils';
 import type { VariantProps } from '@gluestack-ui/utils/nativewind-utils';
 
 const textStyle = tva({
-  base: 'text-typography-900',
+  base: 'text-typography-900 leading-5',
   variants: {
     size: {
       '2xs': 'text-2xs',
@@ -57,4 +57,3 @@ const Text = React.forwardRef<React.ComponentRef<typeof RNText>, ITextProps>(
 Text.displayName = 'Text';
 
 export { Text };
-

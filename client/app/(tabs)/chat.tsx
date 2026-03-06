@@ -15,6 +15,7 @@ import { Heading } from "@/components/ui/heading";
 import { HStack } from "@/components/ui/hstack";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { PageHeader, SectionCard } from "@/components/app/design";
 import { getThemePalette } from "@/lib/theme-palette";
 import { api } from "@/services/api";
 import {
@@ -231,22 +232,12 @@ export default function ChatScreen() {
       edges={["top"]}
       style={{ backgroundColor: colors.background }}
     >
-      <Box className="border-b px-4 py-3" style={{ borderColor: colors.border }}>
-        <HStack className="justify-between items-center">
-          <HStack className="items-center" space="sm">
-            <Box className="p-2 rounded-xl" style={{ backgroundColor: colors.accentSoft }}>
-              <MaterialIcons name="chat" size={24} color={colors.accent} />
-            </Box>
-            <VStack>
-              <Heading size="lg" style={{ color: colors.text }}>
-                {t("chat.aiCoach")}
-              </Heading>
-              <Text className="text-sm" style={{ color: colors.textMuted }}>
-                {t("chat.poweredBy")}
-              </Text>
-            </VStack>
-          </HStack>
-        </HStack>
+      <Box className="px-4 pt-3">
+        <PageHeader
+          title={t("chat.aiCoach")}
+          subtitle={t("chat.poweredBy")}
+          icon="chat"
+        />
       </Box>
 
       <KeyboardAvoidingView
@@ -266,15 +257,9 @@ export default function ChatScreen() {
           showsVerticalScrollIndicator={false}
         />
 
-        <Box
-          className="border-t p-4"
-          style={{
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
-            marginBottom: Platform.OS === "ios" ? 90 : 0,
-          }}
-        >
-          <HStack space="sm" className="items-center">
+        <Box className="mx-4 mb-3" style={{ marginBottom: Platform.OS === "ios" ? 90 : 0 }}>
+          <SectionCard>
+            <HStack space="sm" className="items-center">
             <TextInput
               value={inputText}
               onChangeText={setInputText}
@@ -311,7 +296,8 @@ export default function ChatScreen() {
                 />
               )}
             </RNPressable>
-          </HStack>
+            </HStack>
+          </SectionCard>
         </Box>
       </KeyboardAvoidingView>
     </SafeAreaView>

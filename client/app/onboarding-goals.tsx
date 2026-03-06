@@ -12,6 +12,7 @@ import { HStack } from "@/components/ui/hstack";
 import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { PageHeader, SectionCard } from "@/components/app/design";
 import { getThemePalette } from "@/lib/theme-palette";
 import { useAuthStore } from "@/store/auth-store";
 import { useThemeStore } from "@/store/theme-store";
@@ -36,7 +37,7 @@ export default function OnboardingGoalsScreen() {
     gender: "male" | "female" | "other";
   }>();
 
-  const { updateProfile, isLoading } = useAuthStore();
+  const { updateProfile, isLoading, error } = useAuthStore();
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
 
   const handleGetStarted = async () => {
@@ -45,39 +46,56 @@ export default function OnboardingGoalsScreen() {
       return;
     }
 
+    const ageValue = Array.isArray(age) ? age[0] : age;
+    const weightValue = Array.isArray(weight) ? weight[0] : weight;
+    const heightValue = Array.isArray(height) ? height[0] : height;
+    const genderValue = Array.isArray(gender) ? gender[0] : gender;
+
+    const parsedAge = Number(ageValue);
+    const parsedWeight = Number(weightValue);
+    const parsedHeight = Number(heightValue);
+    const validGender =
+      genderValue === "male" || genderValue === "female" || genderValue === "other"
+        ? genderValue
+        : undefined;
+
+    if (
+      !Number.isFinite(parsedAge) ||
+      !Number.isFinite(parsedWeight) ||
+      !Number.isFinite(parsedHeight) ||
+      !validGender
+    ) {
+      Alert.alert(t("common.error"), t("onboarding.fillAllFields"));
+      router.replace("/onboarding-info");
+      return;
+    }
+
     const success = await updateProfile({
-      age: parseInt(age, 10),
-      weight: parseFloat(weight),
-      height: parseFloat(height),
-      gender,
+      age: parsedAge,
+      weight: parsedWeight,
+      height: parsedHeight,
+      gender: validGender,
       goals: selectedGoal,
     });
 
     if (success) {
       router.replace("/(tabs)");
+      return;
     }
+
+    Alert.alert(t("common.error"), error || t("common.tryAgain"));
   };
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
-      <VStack className="flex-1 px-6 py-8" space="lg">
-        <VStack
-          className="items-center mb-4 p-5 border rounded-3xl"
-          style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-        >
-          <Box
-            className="justify-center items-center mb-4 rounded-2xl w-14 h-14"
-            style={{ backgroundColor: colors.accentSoft }}
-          >
-            <MaterialIcons name="flag" size={26} color={colors.accent} />
-          </Box>
-          <Heading size="2xl" className="text-center" style={{ color: colors.text }}>
-            {t("onboarding.whatsYourGoal")}
-          </Heading>
-          <Text className="text-center mt-2" style={{ color: colors.textMuted }}>
-            {t("onboarding.goalDescription")}
-          </Text>
-        </VStack>
+      <VStack className="flex-1 px-5 py-8" space="lg">
+        <SectionCard className="mb-2">
+          <PageHeader
+            title={t("onboarding.whatsYourGoal")}
+            subtitle={t("onboarding.goalDescription")}
+            icon="flag"
+          />
+        </SectionCard>
 
         <VStack space="sm" className="flex-1">
           <HStack className="flex-wrap justify-between">
@@ -120,7 +138,7 @@ export default function OnboardingGoalsScreen() {
         <Button
           size="xl"
           onPress={handleGetStarted}
-          disabled={isLoading || !selectedGoal}
+          disabled={isLoading}
           className={!selectedGoal ? "opacity-50" : ""}
         >
           {isLoading ? <ButtonSpinner color="white" /> : <ButtonText>{t("onboarding.getStarted")}</ButtonText>}

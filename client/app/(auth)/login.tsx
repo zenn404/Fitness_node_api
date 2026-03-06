@@ -17,6 +17,7 @@ import { Heading } from "@/components/ui/heading";
 import { Input, InputField } from "@/components/ui/input";
 import { Button, ButtonText, ButtonSpinner } from "@/components/ui/button";
 import { Pressable } from "@/components/ui/pressable";
+import { FormLabel, PageHeader, SectionCard } from "@/components/app/design";
 import { getThemePalette } from "@/lib/theme-palette";
 import { useAuthStore } from "@/store/auth-store";
 import { useThemeStore } from "@/store/theme-store";
@@ -54,24 +55,14 @@ export default function LoginScreen() {
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-          <VStack className="flex-1 justify-center px-6 py-8" space="xl">
-            <VStack
-              className="items-center mb-6 p-5 border rounded-3xl"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-            >
-              <Box
-                className="justify-center items-center mb-4 rounded-2xl w-14 h-14"
-                style={{ backgroundColor: colors.accentSoft }}
-              >
-                <MaterialIcons name="shield" size={26} color={colors.accent} />
-              </Box>
-              <Heading size="2xl" className="text-center mb-1" style={{ color: colors.text }}>
-                {t("auth.welcomeBack")}
-              </Heading>
-              <Text className="text-center" style={{ color: colors.textMuted }}>
-                {t("auth.signInToContinue")}
-              </Text>
-            </VStack>
+          <VStack className="flex-1 justify-center px-5 py-8" space="lg">
+            <SectionCard className="mb-2">
+              <PageHeader
+                title={t("auth.welcomeBack")}
+                subtitle={t("auth.signInToContinue")}
+                icon="shield"
+              />
+            </SectionCard>
 
             {error && (
               <Box className="p-3 border rounded-lg" style={{ backgroundColor: colors.dangerSoft, borderColor: colors.danger }}>
@@ -80,7 +71,7 @@ export default function LoginScreen() {
             )}
 
             <VStack space="xs">
-              <Text style={{ color: colors.textMuted }}>{t("auth.email")}</Text>
+              <FormLabel>{t("auth.email")}</FormLabel>
               <Input size="xl" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
                 <InputField
                   placeholder={t("auth.enterEmail")}
@@ -93,7 +84,7 @@ export default function LoginScreen() {
             </VStack>
 
             <VStack space="xs">
-              <Text style={{ color: colors.textMuted }}>{t("auth.password")}</Text>
+              <FormLabel>{t("auth.password")}</FormLabel>
               <Input size="xl" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
                 <InputField
                   placeholder={t("auth.enterPassword")}
@@ -105,7 +96,7 @@ export default function LoginScreen() {
               </Input>
             </VStack>
 
-            <Button size="xl" className="mt-4" onPress={handleLogin} disabled={isLoading}>
+            <Button size="xl" className="mt-2" onPress={handleLogin} disabled={isLoading}>
               {isLoading ? <ButtonSpinner color="white" /> : <ButtonText>{t("auth.signIn")}</ButtonText>}
             </Button>
 

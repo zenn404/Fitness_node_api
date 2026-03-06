@@ -17,6 +17,7 @@ import { Heading } from "@/components/ui/heading";
 import { Input, InputField } from "@/components/ui/input";
 import { Button, ButtonText, ButtonSpinner } from "@/components/ui/button";
 import { Pressable } from "@/components/ui/pressable";
+import { FormLabel, PageHeader, SectionCard } from "@/components/app/design";
 import { getThemePalette } from "@/lib/theme-palette";
 import { useAuthStore } from "@/store/auth-store";
 import { useThemeStore } from "@/store/theme-store";
@@ -63,24 +64,14 @@ export default function RegisterScreen() {
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-          <VStack className="flex-1 justify-center px-6 py-8" space="lg">
-            <VStack
-              className="items-center mb-6 p-5 border rounded-3xl"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-            >
-              <Box
-                className="justify-center items-center mb-4 rounded-2xl w-14 h-14"
-                style={{ backgroundColor: colors.accentSoft }}
-              >
-                <MaterialIcons name="person-add-alt-1" size={26} color={colors.accent} />
-              </Box>
-              <Heading size="2xl" className="text-center mb-1" style={{ color: colors.text }}>
-                {t("auth.createAccount")}
-              </Heading>
-              <Text className="text-center" style={{ color: colors.textMuted }}>
-                {t("auth.startFitnessJourney")}
-              </Text>
-            </VStack>
+          <VStack className="flex-1 justify-center px-5 py-8" space="lg">
+            <SectionCard className="mb-2">
+              <PageHeader
+                title={t("auth.createAccount")}
+                subtitle={t("auth.startFitnessJourney")}
+                icon="person-add-alt-1"
+              />
+            </SectionCard>
 
             {error && (
               <Box className="p-3 border rounded-lg" style={{ backgroundColor: colors.dangerSoft, borderColor: colors.danger }}>
@@ -89,28 +80,28 @@ export default function RegisterScreen() {
             )}
 
             <VStack space="xs">
-              <Text style={{ color: colors.textMuted }}>{t("auth.fullName")}</Text>
+              <FormLabel>{t("auth.fullName")}</FormLabel>
               <Input size="xl" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
                 <InputField placeholder={t("auth.enterName")} value={name} onChangeText={setName} autoCapitalize="words" />
               </Input>
             </VStack>
 
             <VStack space="xs">
-              <Text style={{ color: colors.textMuted }}>{t("auth.email")}</Text>
+              <FormLabel>{t("auth.email")}</FormLabel>
               <Input size="xl" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
                 <InputField placeholder={t("auth.enterEmail")} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
               </Input>
             </VStack>
 
             <VStack space="xs">
-              <Text style={{ color: colors.textMuted }}>{t("auth.password")}</Text>
+              <FormLabel>{t("auth.password")}</FormLabel>
               <Input size="xl" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
                 <InputField placeholder={t("auth.createPassword")} value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" />
               </Input>
             </VStack>
 
             <VStack space="xs">
-              <Text style={{ color: colors.textMuted }}>{t("auth.confirmPassword")}</Text>
+              <FormLabel>{t("auth.confirmPassword")}</FormLabel>
               <Input size="xl" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
                 <InputField placeholder={t("auth.confirmYourPassword")} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoCapitalize="none" />
               </Input>

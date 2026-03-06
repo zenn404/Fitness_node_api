@@ -1,43 +1,29 @@
 import { Link, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Text, View } from '@/components/Themed';
+import { AppScreen, PageHeader, SectionCard } from '@/components/app/design';
+import { Text } from '@/components/ui/text';
+import { getThemePalette } from '@/lib/theme-palette';
+import { useThemeStore } from '@/store/theme-store';
 
 export default function NotFoundScreen() {
   const { t } = useTranslation();
+  const { theme } = useThemeStore();
+  const colors = getThemePalette(theme);
 
   return (
     <>
       <Stack.Screen options={{ title: t('notFound.title') }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>{t('notFound.message')}</Text>
-
-        <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>{t('notFound.goHome')}</Text>
-        </Link>
-      </View>
+      <AppScreen scroll={false}>
+        <SectionCard className="my-auto items-center">
+          <PageHeader title={t('notFound.title')} subtitle={t('notFound.message')} icon="error-outline" />
+          <Link href="/" style={{ marginTop: 8 }}>
+            <Text className="font-semibold" style={{ color: colors.accent }}>
+              {t('notFound.goHome')}
+            </Text>
+          </Link>
+        </SectionCard>
+      </AppScreen>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#2e78b7',
-  },
-});

@@ -26,6 +26,7 @@ import { Input, InputField } from "@/components/ui/input";
 import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { PageHeader } from "@/components/app/design";
 import { changeLanguage } from "@/lib/i18n";
 import { getThemePalette } from "@/lib/theme-palette";
 import {
@@ -217,9 +218,7 @@ export default function ProfileScreen() {
         className="flex-1 px-4"
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        <Heading size="2xl" className="mt-4 mb-6" style={{ color: colors.text }}>
-          {t("profile.title")}
-        </Heading>
+        <PageHeader title={t("profile.title")} icon="account-circle" />
 
         <VStack className="items-center mb-8">
           <Box className="justify-center items-center mb-4 rounded-full w-24 h-24" style={{ backgroundColor: colors.accent }}>

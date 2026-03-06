@@ -16,6 +16,7 @@ import { HStack } from "@/components/ui/hstack";
 import { Pressable } from "@/components/ui/pressable";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { SectionCard } from "@/components/app/design";
 import { getThemePalette } from "@/lib/theme-palette";
 import { getDifficultyColor } from "@/lib/utils";
 import { api, Exercise, Workout } from "@/services/api";
@@ -297,11 +298,8 @@ export default function WorkoutSessionScreen() {
           <Text className="text-center text-lg mb-8" style={{ color: colors.textMuted }}>
             {t("session.greatJob", { name: workout.name })}
           </Text>
-          <VStack
-            className="w-full p-6 rounded-2xl mb-8"
-            style={{ backgroundColor: colors.surface }}
-            space="md"
-          >
+          <SectionCard className="w-full p-6 mb-8">
+            <VStack space="md">
             <HStack className="justify-between items-center">
               <Text style={{ color: colors.textMuted }}>{t("workout.exercises")}</Text>
               <Text className="font-semibold" style={{ color: colors.text }}>
@@ -323,7 +321,8 @@ export default function WorkoutSessionScreen() {
                 {workout.difficulty}
               </Text>
             </HStack>
-          </VStack>
+            </VStack>
+          </SectionCard>
           <RNPressable
             onPress={handleFinish}
             className="w-full py-4 rounded-2xl active:opacity-90"

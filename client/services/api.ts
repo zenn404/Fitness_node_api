@@ -1,4 +1,34 @@
+import { Platform } from "react-native";
+
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+
+const stripTrailingSlash = (value: string) => value.replace(/\/+$/, "");
+
+const getCandidateBaseUrls = (baseUrl: string): string[] => {
+  const normalized = stripTrailingSlash(baseUrl);
+  const candidates = [normalized];
+
+  if (Platform.OS !== "android") {
+    return candidates;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    const host = parsed.hostname;
+
+    // Android emulator cannot reach Mac localhost/LAN in some setups.
+    if (host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.")) {
+      const emulatorUrl = `${parsed.protocol}//10.0.2.2${parsed.port ? `:${parsed.port}` : ""}`;
+      if (!candidates.includes(emulatorUrl)) {
+        candidates.push(emulatorUrl);
+      }
+    }
+  } catch {
+    // Keep original URL if parsing fails.
+  }
+
+  return candidates;
+};
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -15,9 +45,11 @@ interface RequestOptions {
 
 class ApiService {
   private baseUrl: string;
+  private candidateBaseUrls: string[];
 
   constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
+    this.baseUrl = stripTrailingSlash(baseUrl);
+    this.candidateBaseUrls = getCandidateBaseUrls(this.baseUrl);
   }
 
   private async request<T>(
@@ -34,39 +66,45 @@ class ApiService {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-      });
+    let lastError: unknown = null;
 
-      const text = await response.text();
+    for (const baseUrl of this.candidateBaseUrls) {
       try {
-        return JSON.parse(text);
-      } catch {
-        if (!response.ok) {
+        const response = await fetch(`${baseUrl}${endpoint}`, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : undefined,
+        });
+
+        const text = await response.text();
+        try {
+          return JSON.parse(text);
+        } catch {
+          if (!response.ok) {
+            return {
+              success: false,
+              message: `Request failed (${response.status})`,
+              details: text?.slice(0, 240),
+            };
+          }
+
           return {
             success: false,
-            message: `Request failed (${response.status})`,
+            message: "Unexpected non-JSON response from server.",
             details: text?.slice(0, 240),
           };
         }
-
-        return {
-          success: false,
-          message: "Unexpected non-JSON response from server.",
-          details: text?.slice(0, 240),
-        };
+      } catch (error) {
+        lastError = error;
       }
-    } catch (error) {
-      console.error("API request error:", error);
-      return {
-        success: false,
-        message: "Network error. Check API URL/device network and try again.",
-        details: `${this.baseUrl}${endpoint}`,
-      };
     }
+
+    console.error("API request error:", lastError);
+    return {
+      success: false,
+      message: "Network error. Check API URL/device network and try again.",
+      details: this.candidateBaseUrls.map((url) => `${url}${endpoint}`).join(" | "),
+    };
   }
 
   // Auth endpoints

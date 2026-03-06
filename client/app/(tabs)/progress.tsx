@@ -15,6 +15,7 @@ import { Heading } from "@/components/ui/heading";
 import { HStack } from "@/components/ui/hstack";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { PageHeader, SectionCard } from "@/components/app/design";
 import { getThemePalette } from "@/lib/theme-palette";
 import { Activity, api, ProgressData, WeeklyChartItem } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
@@ -248,10 +249,11 @@ export default function ProgressScreen() {
           />
         }
       >
-        <VStack className="mt-4 mb-6">
-          <Heading size="2xl" style={{ color: colors.text }}>{t("progress.title")}</Heading>
-          <Text style={{ color: colors.textMuted }}>{t("progress.trackJourney")}</Text>
-        </VStack>
+        <PageHeader
+          title={t("progress.title")}
+          subtitle={t("progress.trackJourney")}
+          icon="candlestick-chart"
+        />
 
         {isLoading && (
           <Box className="justify-center items-center py-10">
@@ -261,10 +263,7 @@ export default function ProgressScreen() {
 
         {!isLoading && (
           <>
-            <Box
-              className="mb-6 p-4 border rounded-2xl"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-            >
+            <SectionCard className="mb-6">
               <HStack className="justify-between items-center mb-4">
                 <VStack>
                   <Text className="text-sm" style={{ color: colors.textMuted }}>
@@ -289,12 +288,9 @@ export default function ProgressScreen() {
                   />
                 )}
               </Box>
-            </Box>
+            </SectionCard>
 
-            <Box
-              className="mb-6 p-4 border rounded-2xl"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-            >
+            <SectionCard className="mb-6">
               <HStack className="justify-between items-center mb-4">
                 <VStack>
                   <Text className="text-sm" style={{ color: colors.textMuted }}>
@@ -319,12 +315,9 @@ export default function ProgressScreen() {
                   />
                 )}
               </Box>
-            </Box>
+            </SectionCard>
 
-            <Box
-              className="mb-6 p-4 border rounded-2xl"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-            >
+            <SectionCard className="mb-6">
               <Heading size="md" className="mb-3" style={{ color: colors.text }}>
                 {t("progress.allTimeStats")}
               </Heading>
@@ -371,25 +364,19 @@ export default function ProgressScreen() {
                   </Text>
                 </HStack>
               </VStack>
-            </Box>
+            </SectionCard>
 
-            <Box
-              className="mb-6 p-4 border rounded-2xl"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-            >
+            <SectionCard className="mb-6">
               <HStack className="justify-between items-center">
                 <Heading size="md" style={{ color: colors.text }}>{t("progress.thisWeek")}</Heading>
                 <Text style={{ color: colors.textMuted }}>
                   {weeklyMinutes} {t("common.min")}
                 </Text>
               </HStack>
-            </Box>
+            </SectionCard>
 
             {activities.length > 0 && (
-              <Box
-                className="mb-6 p-4 border rounded-2xl"
-                style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-              >
+              <SectionCard className="mb-6">
                 <Heading size="md" className="mb-3" style={{ color: colors.text }}>
                   {t("home.recentActivity")}
                 </Heading>
@@ -401,7 +388,7 @@ export default function ProgressScreen() {
                     </HStack>
                   ))}
                 </VStack>
-              </Box>
+              </SectionCard>
             )}
           </>
         )}

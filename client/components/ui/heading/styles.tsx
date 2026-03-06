@@ -5,7 +5,7 @@ const baseStyle = isWeb
   : '';
 
 export const headingStyle = tva({
-  base: `text-typography-900 font-bold font-heading tracking-sm my-0 ${baseStyle}`,
+  base: `text-typography-900 font-semibold font-heading tracking-sm my-0 ${baseStyle}`,
   variants: {
     isTruncated: {
       true: 'truncate',
@@ -29,15 +29,15 @@ export const headingStyle = tva({
       true: 'bg-yellow-500',
     },
     size: {
-      '5xl': 'text-6xl',
-      '4xl': 'text-5xl',
-      '3xl': 'text-4xl',
-      '2xl': 'text-3xl',
-      'xl': 'text-2xl',
-      'lg': 'text-xl',
-      'md': 'text-lg',
-      'sm': 'text-base',
-      'xs': 'text-sm',
+      '5xl': 'text-5xl',
+      '4xl': 'text-4xl',
+      '3xl': 'text-3xl',
+      '2xl': 'text-2xl',
+      'xl': 'text-xl',
+      'lg': 'text-lg',
+      'md': 'text-base',
+      'sm': 'text-sm',
+      'xs': 'text-xs',
     },
   },
 });

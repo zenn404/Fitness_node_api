@@ -238,9 +238,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         return true;
       } else {
+        const message = response.message || "Failed to update profile";
+        const isMissingSchemaMessage =
+          message.includes("users profile columns are missing") ||
+          message.includes("Could not find the 'age' column of 'users'") ||
+          message.includes("Could not find the 'weight' column of 'users'") ||
+          message.includes("Could not find the 'height' column of 'users'") ||
+          message.includes("Could not find the 'goals' column of 'users'") ||
+          message.includes("Could not find the 'gender' column of 'users'");
+
+        if (isMissingSchemaMessage) {
+          const currentUser = get().user;
+          if (currentUser) {
+            await AsyncStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+            await initializeDefaultCaloriePlan(currentUser);
+          }
+          set({
+            isLoading: false,
+            needsOnboarding: false,
+            error: null,
+          });
+          return true;
+        }
+
         set({
           isLoading: false,
-          error: response.message || "Failed to update profile",
+          error: message,
         });
         return false;
       }

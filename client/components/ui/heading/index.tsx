@@ -1,8 +1,15 @@
 import React, { forwardRef, memo } from 'react';
-import { H1, H2, H3, H4, H5, H6 } from '@expo/html-elements';
+import { Text } from 'react-native';
 import { headingStyle } from './styles';
 import type { VariantProps } from '@gluestack-ui/utils/nativewind-utils';
 import { cssInterop } from 'nativewind';
+
+const H1 = Text;
+const H2 = Text;
+const H3 = Text;
+const H4 = Text;
+const H5 = Text;
+const H6 = Text;
 
 type IHeadingProps = VariantProps<typeof headingStyle> &
   React.ComponentPropsWithoutRef<typeof H1> & {
@@ -51,7 +58,6 @@ const MappedHeading = memo(
                 class: className,
               })}
               {...props}
-              // @ts-expect-error : type issue
               ref={ref}
             />
           );
@@ -70,7 +76,6 @@ const MappedHeading = memo(
                 class: className,
               })}
               {...props}
-              // @ts-expect-error : type issue
               ref={ref}
             />
           );
@@ -89,7 +94,6 @@ const MappedHeading = memo(
                 class: className,
               })}
               {...props}
-              // @ts-expect-error : type issue
               ref={ref}
             />
           );
@@ -108,7 +112,6 @@ const MappedHeading = memo(
                 class: className,
               })}
               {...props}
-              // @ts-expect-error : type issue
               ref={ref}
             />
           );
@@ -127,7 +130,6 @@ const MappedHeading = memo(
                 class: className,
               })}
               {...props}
-              // @ts-expect-error : type issue
               ref={ref}
             />
           );
@@ -147,7 +149,6 @@ const MappedHeading = memo(
                 class: className,
               })}
               {...props}
-              // @ts-expect-error : type issue
               ref={ref}
             />
           );
@@ -166,7 +167,6 @@ const MappedHeading = memo(
                 class: className,
               })}
               {...props}
-              // @ts-expect-error : type issue
               ref={ref}
             />
           );

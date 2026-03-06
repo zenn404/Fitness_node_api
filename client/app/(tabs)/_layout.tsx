@@ -22,18 +22,26 @@ export default function TabLayout() {
             position: "absolute",
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
-            height: 90,
+            borderTopWidth: 1,
+            height: 88,
             paddingBottom: 20,
-            paddingTop: 10,
+            paddingTop: 8,
+            paddingHorizontal: 6,
           },
           default: {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
-            height: 70,
+            borderTopWidth: 1,
+            height: 72,
             paddingBottom: 10,
-            paddingTop: 10,
+            paddingTop: 8,
+            paddingHorizontal: 6,
           },
         }),
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "700",
+        },
       }}
     >
       <Tabs.Screen

@@ -16,6 +16,7 @@ import { VStack } from "@/components/ui/vstack";
 import { HStack } from "@/components/ui/hstack";
 import { Pressable } from "@/components/ui/pressable";
 import { useRouter } from "expo-router";
+import { PageHeader, SectionCard } from "@/components/app/design";
 import { useAuthStore } from "@/store/auth-store";
 import { useThemeStore } from "@/store/theme-store";
 import { getThemePalette } from "@/lib/theme-palette";
@@ -340,10 +341,11 @@ export default function HomeScreen() {
           />
         }
       >
-        <VStack className="mt-4 mb-6">
-          <Text style={{ color: colors.textMuted }}>{t("home.welcomeBack")}</Text>
-          <Heading size="2xl" style={{ color: colors.text }}>{firstName} 👋</Heading>
-        </VStack>
+        <PageHeader
+          title={`${firstName} 👋`}
+          subtitle={t("home.welcomeBack")}
+          icon="home"
+        />
 
         {isLoading && (
           <Box className="justify-center items-center py-10">
@@ -352,10 +354,7 @@ export default function HomeScreen() {
         )}
 
         {!isLoading && (
-          <Box
-            className="mb-6 rounded-3xl border p-4"
-            style={{ borderColor: colors.border, backgroundColor: colors.surface }}
-          >
+          <SectionCard className="mb-6">
             <Text className="mb-3" style={{ color: colors.textMuted }}>{t("home.todaysProgress")}</Text>
             <HStack space="md">
               <VStack className="flex-1 items-center rounded-2xl p-3" style={{ backgroundColor: colors.surfaceAlt }}>
@@ -439,7 +438,7 @@ export default function HomeScreen() {
                 </Text>
               )}
             </Box>
-          </Box>
+          </SectionCard>
         )}
 
         <Pressable
@@ -455,7 +454,7 @@ export default function HomeScreen() {
           </HStack>
         </Pressable>
 
-        <Box className="mb-6 p-4 border rounded-2xl" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+        <SectionCard className="mb-6">
           <HStack className="items-center justify-between">
             <VStack className="flex-1">
               <Text className="text-xs" style={{ color: colors.textMuted }}>{t("home.estimatedMaintenance")}</Text>
@@ -470,9 +469,9 @@ export default function HomeScreen() {
               <MaterialIcons name="monitor-weight" size={22} color={colors.warning} />
             </Box>
           </HStack>
-        </Box>
+        </SectionCard>
 
-        <Box className="mb-6 p-4 border rounded-2xl" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+        <SectionCard className="mb-6">
           <HStack className="items-start justify-between">
             <VStack className="flex-1">
               <Text className="text-xs" style={{ color: colors.textMuted }}>{t("home.smartCalorieGuide")}</Text>
@@ -492,9 +491,9 @@ export default function HomeScreen() {
               <MaterialIcons name="local-fire-department" size={22} color={colors.warning} />
             </Box>
           </HStack>
-        </Box>
+        </SectionCard>
 
-        <Box className="mb-6 p-4 border rounded-2xl" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+        <SectionCard className="mb-6">
           <HStack className="items-start justify-between">
             <VStack className="flex-1">
               <Text className="text-xs" style={{ color: colors.textMuted }}>{t("home.weeklyStatusTitle")}</Text>
@@ -518,7 +517,7 @@ export default function HomeScreen() {
               <MaterialIcons name="insights" size={22} color={colors.accent} />
             </Box>
           </HStack>
-        </Box>
+        </SectionCard>
 
         <HStack className="justify-between items-center mb-4">
           <Heading size="md" style={{ color: colors.text }}>{t("home.todaysFoodLog")}</Heading>
@@ -528,22 +527,21 @@ export default function HomeScreen() {
         </HStack>
 
         {!isLoading && foodLogs.length === 0 && (
-          <Box className="items-center p-6 mb-6 border rounded-2xl" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+          <SectionCard className="items-center p-6 mb-6">
             <MaterialIcons name="restaurant" size={36} color={colors.icon} />
             <Text className="mt-2" style={{ color: colors.textMuted }}>{t("home.noFoodLoggedToday")}</Text>
             <Text className="text-sm" style={{ color: colors.textSubtle }}>
               {t("home.addFoodsFromNutrition")}
             </Text>
-          </Box>
+          </SectionCard>
         )}
 
         {!isLoading && foodLogs.length > 0 && (
           <VStack space="sm" className="mb-6">
             {foodLogs.slice(0, 4).map((log) => (
-                <Box
+                <SectionCard
                   key={log.id}
-                  className="p-4 border rounded-2xl"
-                  style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+                  className="p-4"
                 >
                 <HStack className="justify-between items-center">
                   <VStack className="flex-1">
@@ -555,7 +553,7 @@ export default function HomeScreen() {
                   </VStack>
                   <MaterialIcons name="check-circle" size={18} color="#34d399" />
                 </HStack>
-              </Box>
+              </SectionCard>
             ))}
           </VStack>
         )}
@@ -568,13 +566,13 @@ export default function HomeScreen() {
         </HStack>
 
         {!isLoading && activities.length === 0 && (
-          <Box className="items-center p-6 border rounded-2xl" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+          <SectionCard className="items-center p-6">
             <MaterialIcons name="history" size={40} color={colors.icon} />
             <Text className="mt-2" style={{ color: colors.textMuted }}>{t("home.noRecentActivity")}</Text>
             <Text className="text-sm" style={{ color: colors.textSubtle }}>
               {t("home.startWorkoutToSee")}
             </Text>
-          </Box>
+          </SectionCard>
         )}
 
         {!isLoading && activities.length > 0 && (

@@ -1,7 +1,35 @@
--- Adds gender to users and isolates nutrition logs by user.
+-- Adds missing user profile columns and daily logs table/columns.
+-- Safe to run multiple times.
 
 alter table if exists public.users
 add column if not exists gender text check (gender in ('male', 'female', 'other'));
+
+alter table if exists public.users
+add column if not exists age integer;
+
+alter table if exists public.users
+add column if not exists weight decimal(5,2);
+
+alter table if exists public.users
+add column if not exists height decimal(5,2);
+
+alter table if exists public.users
+add column if not exists goals text;
+
+create table if not exists public.daily_logs (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.users(id) on delete cascade,
+  name text not null,
+  calories numeric,
+  protein numeric,
+  carbs numeric,
+  fat numeric,
+  sugar numeric,
+  fiber numeric,
+  serving_size numeric,
+  log_date date not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
 
 alter table if exists public.daily_logs
 add column if not exists user_id uuid references public.users(id) on delete cascade;

@@ -17,6 +17,7 @@ import { HStack } from "@/components/ui/hstack";
 import { Input, InputField } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
+import { FormLabel, PageHeader, SectionCard } from "@/components/app/design";
 import { getThemePalette } from "@/lib/theme-palette";
 import { useThemeStore } from "@/store/theme-store";
 
@@ -81,27 +82,17 @@ export default function OnboardingInfoScreen() {
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-          <VStack className="flex-1 justify-center px-6 py-8" space="lg">
-            <VStack
-              className="items-center mb-6 p-5 border rounded-3xl"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-            >
-              <Box
-                className="justify-center items-center mb-4 rounded-2xl w-14 h-14"
-                style={{ backgroundColor: colors.accentSoft }}
-              >
-                <MaterialIcons name="monitor-weight" size={26} color={colors.accent} />
-              </Box>
-              <Heading size="2xl" className="text-center" style={{ color: colors.text }}>
-                {t("onboarding.tellUsAboutYou")}
-              </Heading>
-              <Text className="text-center mt-2" style={{ color: colors.textMuted }}>
-                {t("onboarding.personalizeExperience")}
-              </Text>
-            </VStack>
+          <VStack className="flex-1 justify-center px-5 py-8" space="lg">
+            <SectionCard>
+              <PageHeader
+                title={t("onboarding.tellUsAboutYou")}
+                subtitle={t("onboarding.personalizeExperience")}
+                icon="monitor-weight"
+              />
+            </SectionCard>
 
             <VStack space="xs">
-              <Text style={{ color: colors.textMuted }}>{t("onboarding.gender")}</Text>
+              <FormLabel>{t("onboarding.gender")}</FormLabel>
               <HStack className="justify-between">
                 {[
                   { key: "male", label: t("onboarding.male") },
@@ -132,21 +123,21 @@ export default function OnboardingInfoScreen() {
             </VStack>
 
             <VStack space="xs">
-              <Text style={{ color: colors.textMuted }}>{t("onboarding.age")}</Text>
+              <FormLabel>{t("onboarding.age")}</FormLabel>
               <Input size="xl" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
                 <InputField placeholder={t("onboarding.enterAge")} value={age} onChangeText={setAge} keyboardType="number-pad" />
               </Input>
             </VStack>
 
             <VStack space="xs">
-              <Text style={{ color: colors.textMuted }}>{t("onboarding.weight")} (kg)</Text>
+              <FormLabel>{t("onboarding.weight")} (kg)</FormLabel>
               <Input size="xl" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
                 <InputField placeholder={t("onboarding.enterWeight")} value={weight} onChangeText={setWeight} keyboardType="decimal-pad" />
               </Input>
             </VStack>
 
             <VStack space="xs">
-              <Text style={{ color: colors.textMuted }}>{t("onboarding.height")} (cm)</Text>
+              <FormLabel>{t("onboarding.height")} (cm)</FormLabel>
               <Input size="xl" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
                 <InputField placeholder={t("onboarding.enterHeight")} value={height} onChangeText={setHeight} keyboardType="decimal-pad" />
               </Input>

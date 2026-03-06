@@ -33,6 +33,68 @@ const isMissingColumnError = (error, columnName) =>
       error.message.toLowerCase().includes(columnName.toLowerCase()),
   );
 
+const isMissingUsersProfileColumnError = (error) =>
+  Boolean(
+    error &&
+      error.code === "PGRST204" &&
+      error.message &&
+      error.message.toLowerCase().includes("column") &&
+      error.message.toLowerCase().includes("users") &&
+      ["age", "weight", "height", "goals", "gender"].some((col) =>
+        error.message.toLowerCase().includes(`'${col}'`),
+      ),
+  );
+
+const USER_PROFILE_COLUMNS = [
+  "id",
+  "email",
+  "name",
+  "gender",
+  "age",
+  "weight",
+  "height",
+  "goals",
+  "created_at",
+];
+
+const getMissingColumnFromError = (error) => {
+  if (!error || error.code !== "PGRST204" || !error.message) return null;
+  const match = error.message.match(/'([^']+)' column/);
+  return match?.[1] || null;
+};
+
+const buildUserSelect = (columns) => columns.join(", ");
+
+const getUserWithAvailableColumns = async (userId) => {
+  let columns = [...USER_PROFILE_COLUMNS];
+
+  while (columns.length > 0) {
+    const result = await supabase
+      .from("users")
+      .select(buildUserSelect(columns))
+      .eq("id", userId)
+      .single();
+
+    if (!result.error) {
+      return { user: result.data, error: null, columns };
+    }
+
+    const missingColumn = getMissingColumnFromError(result.error);
+    if (missingColumn && columns.includes(missingColumn)) {
+      columns = columns.filter((column) => column !== missingColumn);
+      continue;
+    }
+
+    return { user: null, error: result.error, columns };
+  }
+
+  return {
+    user: null,
+    error: { message: "No readable profile columns found in users table." },
+    columns,
+  };
+};
+
 // Register new user
 const register = async (req, res) => {
   try {
@@ -238,21 +300,7 @@ const getProfile = async (req, res) => {
       });
     }
 
-    let { data: user, error } = await supabase
-      .from("users")
-      .select("id, email, name, gender, age, weight, height, goals, created_at")
-      .eq("id", req.user.id)
-      .single();
-
-    if (error && isMissingColumnError(error, "gender")) {
-      const retry = await supabase
-        .from("users")
-        .select("id, email, name, age, weight, height, goals, created_at")
-        .eq("id", req.user.id)
-        .single();
-      user = retry.data;
-      error = retry.error;
-    }
+    const { user, error } = await getUserWithAvailableColumns(req.user.id);
 
     if (error || !user) {
       return res.status(404).json({
@@ -303,30 +351,63 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    let { data: user, error } = await supabase
-      .from("users")
-      .update(updateData)
-      .eq("id", req.user.id)
-      .select("id, email, name, gender, age, weight, height, goals, created_at")
-      .single();
+    let retryUpdateData = { ...updateData };
+    let retrySelectColumns = [...USER_PROFILE_COLUMNS];
+    let user = null;
+    let error = null;
 
-    if (error && isMissingColumnError(error, "gender")) {
-      const fallbackUpdate = { ...updateData };
-      delete fallbackUpdate.gender;
-      const retry = await supabase
+    while (Object.keys(retryUpdateData).length > 0) {
+      const result = await supabase
         .from("users")
-        .update(fallbackUpdate)
+        .update(retryUpdateData)
         .eq("id", req.user.id)
-        .select("id, email, name, age, weight, height, goals, created_at")
+        .select(buildUserSelect(retrySelectColumns))
         .single();
-      user = retry.data;
-      error = retry.error;
+
+      user = result.data;
+      error = result.error;
+
+      if (!error) break;
+
+      const missingColumn = getMissingColumnFromError(error);
+      if (!missingColumn) break;
+
+      let changed = false;
+      if (missingColumn in retryUpdateData) {
+        delete retryUpdateData[missingColumn];
+        changed = true;
+      }
+      if (retrySelectColumns.includes(missingColumn)) {
+        retrySelectColumns = retrySelectColumns.filter(
+          (column) => column !== missingColumn,
+        );
+        changed = true;
+      }
+
+      if (!changed) break;
+    }
+
+    // If no profile columns exist for update, allow onboarding flow to continue.
+    if (error && Object.keys(retryUpdateData).length === 0) {
+      const fallback = await getUserWithAvailableColumns(req.user.id);
+      if (!fallback.error && fallback.user) {
+        user = fallback.user;
+        error = null;
+      }
     }
 
     if (error) {
+      console.error("Update profile supabase error:", error);
+      if (isMissingUsersProfileColumnError(error)) {
+        return res.status(500).json({
+          success: false,
+          message:
+            "users profile columns are missing. Run migration server/database/2026-02-26-add-gender-and-user-logs.sql.",
+        });
+      }
       return res.status(500).json({
         success: false,
-        message: "Error updating profile",
+        message: error.message || "Error updating profile",
       });
     }
 
