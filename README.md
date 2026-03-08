@@ -1,3 +1,8 @@
+#Team members
+Nyi Thu Hein (IT) 6612080
+Aung Myint Myat  (CS) 6611906
+PURAN PAODENSAKUL (CS) 6611140
+
 # Fitness Node API + Mobile Client
 
 Full-stack fitness tracking project with:
