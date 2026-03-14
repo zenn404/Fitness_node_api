@@ -10,7 +10,7 @@ PURAN PAODENSAKUL (CS) 6611140
 
 Full-stack fitness tracking project with:
 - `server/`: Express API + Supabase
-- `client/`: Expo React Native app (Android/iOS/Web)
+- `client/`: Expo React Native app 
 
 This project covers authentication, workout/exercise management, dashboard analytics, nutrition logging, onboarding, and profile management.
 
