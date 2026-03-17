@@ -198,6 +198,150 @@ class ApiService {
     });
   }
 
+  async getExercises(params?: {
+    workout_id?: string;
+    muscle_group?: string;
+    difficulty?: string;
+    search?: string;
+  }): Promise<ApiResponse<{ exercises: Exercise[] }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.workout_id) queryParams.append("workout_id", params.workout_id);
+    if (params?.muscle_group) queryParams.append("muscle_group", params.muscle_group);
+    if (params?.difficulty) queryParams.append("difficulty", params.difficulty);
+    if (params?.search) queryParams.append("search", params.search);
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
+    return this.request(`/api/exercises${query}`, {
+      method: "GET",
+    });
+  }
+
+  async createWorkout(
+    token: string,
+    data: {
+      name: string;
+      description?: string;
+      difficulty?: "Beginner" | "Intermediate" | "Advanced";
+      duration_minutes?: number;
+    },
+  ): Promise<ApiResponse<{ workout: Workout }>> {
+    return this.request("/api/workouts", {
+      method: "POST",
+      body: data,
+      token,
+    });
+  }
+
+  async updateWorkout(
+    token: string,
+    id: string,
+    data: {
+      name?: string;
+      description?: string;
+      difficulty?: "Beginner" | "Intermediate" | "Advanced";
+      duration_minutes?: number;
+    },
+  ): Promise<ApiResponse<{ workout: Workout }>> {
+    return this.request(`/api/workouts/${id}`, {
+      method: "PUT",
+      body: data,
+      token,
+    });
+  }
+
+  async deleteWorkout(token: string, id: string): Promise<ApiResponse> {
+    return this.request(`/api/workouts/${id}`, {
+      method: "DELETE",
+      token,
+    });
+  }
+
+  async createExercise(
+    token: string,
+    data: {
+      workout_id: string;
+      name: string;
+      description?: string;
+      muscle_group: string;
+      difficulty?: "Beginner" | "Intermediate" | "Advanced";
+      sets?: number;
+      reps?: number;
+      rest_seconds?: number;
+      order_index?: number;
+      notes?: string;
+      image_url?: string;
+      tutorial_url?: string;
+    },
+  ): Promise<ApiResponse<{ exercise: Exercise }>> {
+    return this.request("/api/exercises", {
+      method: "POST",
+      body: data,
+      token,
+    });
+  }
+
+  async updateExercise(
+    token: string,
+    id: string,
+    data: {
+      workout_id?: string;
+      name?: string;
+      description?: string;
+      muscle_group?: string;
+      difficulty?: "Beginner" | "Intermediate" | "Advanced";
+      sets?: number;
+      reps?: number;
+      rest_seconds?: number;
+      order_index?: number;
+      notes?: string;
+      image_url?: string;
+      tutorial_url?: string;
+    },
+  ): Promise<ApiResponse<{ exercise: Exercise }>> {
+    return this.request(`/api/exercises/${id}`, {
+      method: "PUT",
+      body: data,
+      token,
+    });
+  }
+
+  async deleteExercise(token: string, id: string): Promise<ApiResponse> {
+    return this.request(`/api/exercises/${id}`, {
+      method: "DELETE",
+      token,
+    });
+  }
+
+  async getAdminUsers(token: string): Promise<ApiResponse<{ users: User[] }>> {
+    return this.request("/api/admin/users", {
+      method: "GET",
+      token,
+    });
+  }
+
+  async createAdminUser(
+    token: string,
+    data: {
+      name: string;
+      email: string;
+      password: string;
+      role: "user" | "admin";
+      gender?: "male" | "female" | "other";
+    },
+  ): Promise<ApiResponse<{ user: User }>> {
+    return this.request("/api/admin/users", {
+      method: "POST",
+      body: data,
+      token,
+    });
+  }
+
+  async deleteAdminUser(token: string, id: string): Promise<ApiResponse> {
+    return this.request(`/api/admin/users/${id}`, {
+      method: "DELETE",
+      token,
+    });
+  }
+
   // Dashboard endpoints
   async getDashboardStats(token: string): Promise<ApiResponse<DashboardStats>> {
     return this.request("/api/dashboard/stats", {
@@ -301,6 +445,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  role?: "user" | "admin";
   gender?: "male" | "female" | "other";
   age?: number;
   weight?: number;

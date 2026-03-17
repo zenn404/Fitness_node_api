@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/auth");
+const adminOnly = require("../middleware/adminOnly");
 const {
   getExercises,
   getExercise,
@@ -16,8 +17,8 @@ router.get("/grouped", getExercisesByMuscleGroup);
 router.get("/:id", getExercise);
 
 // Protected routes - require authentication
-router.post("/", authMiddleware, createExercise);
-router.put("/:id", authMiddleware, updateExercise);
-router.delete("/:id", authMiddleware, deleteExercise);
+router.post("/", authMiddleware, adminOnly, createExercise);
+router.put("/:id", authMiddleware, adminOnly, updateExercise);
+router.delete("/:id", authMiddleware, adminOnly, deleteExercise);
 
 module.exports = router;

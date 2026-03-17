@@ -12,9 +12,13 @@ const cookieOptions = {
 
 // Generate JWT token
 const generateToken = (user) => {
-  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-  });
+  return jwt.sign(
+    { id: user.id, email: user.email, role: user.role || "user" },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+    },
+  );
 };
 
 const normalizeGender = (value) => {
@@ -49,6 +53,7 @@ const USER_PROFILE_COLUMNS = [
   "id",
   "email",
   "name",
+  "role",
   "gender",
   "age",
   "weight",
@@ -142,6 +147,7 @@ const register = async (req, res) => {
           email,
           password: hashedPassword,
           name,
+          role: "user",
           ...(normalizedGender ? { gender: normalizedGender } : {}),
           created_at: new Date().toISOString(),
         },
@@ -157,6 +163,7 @@ const register = async (req, res) => {
             email,
             password: hashedPassword,
             name,
+            role: "user",
             created_at: new Date().toISOString(),
           },
         ])

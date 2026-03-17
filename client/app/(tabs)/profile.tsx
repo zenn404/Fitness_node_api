@@ -233,6 +233,17 @@ export default function ProfileScreen() {
             {user?.email || t("profile.noEmail")}
           </Text>
 
+          {user?.role === "admin" && (
+            <Box
+              className="mt-3 rounded-full px-4 py-2"
+              style={{ backgroundColor: colors.accent }}
+            >
+              <Text className="font-semibold" style={{ color: colors.accentText }}>
+                {t("profile.adminAccount")}
+              </Text>
+            </Box>
+          )}
+
           {user?.age && (
             <HStack space="lg" className="mt-4">
               <VStack className="items-center">
@@ -520,7 +531,7 @@ export default function ProfileScreen() {
 
             <LanguageOption
               label={t("profile.english")}
-              subtitle="English"
+              subtitle={t("profile.english")}
               selected={i18n.language === "en"}
               onPress={async () => {
                 await changeLanguage("en");

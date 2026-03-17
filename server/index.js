@@ -9,6 +9,7 @@ const workoutRoutes = require("./routes/workoutRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const sessionRoutes = require("./routes/sessionRoutes");
 const nutritionRoutes = require("./routes/nutritionRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,6 +32,7 @@ app.use("/api/workouts", workoutRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api", nutritionRoutes);
+app.use("/api/admin", adminRoutes);
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({

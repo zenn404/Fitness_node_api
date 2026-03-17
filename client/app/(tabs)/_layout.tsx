@@ -5,11 +5,14 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { getThemePalette } from "@/lib/theme-palette";
 import { useThemeStore } from "@/store/theme-store";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function TabLayout() {
   const {t}=useTranslation();
   const { theme } = useThemeStore();
+  const { user } = useAuthStore();
   const colors = getThemePalette(theme);
+  const isAdmin = user?.role === "admin";
   return (
     <Tabs
       screenOptions={{
@@ -95,6 +98,16 @@ export default function TabLayout() {
           title: t("tabs.profile"),
           tabBarIcon: ({ color }) => (
             <MaterialIcons size={28} name="account-circle" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          href: isAdmin ? undefined : null,
+          title: "Admin",
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={26} name="admin-panel-settings" color={color} />
           ),
         }}
       />

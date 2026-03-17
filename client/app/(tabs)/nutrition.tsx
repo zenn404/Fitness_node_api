@@ -47,6 +47,22 @@ const parseLocalDate = (value: string) => {
 const formatNumber = (value: number, decimals = 1) =>
   Number.isFinite(value) ? value.toFixed(decimals) : "0.0";
 
+const scaleNutritionItem = (item: NutritionItem, grams: number): NutritionItem => {
+  const baseServing = item.serving_size_g > 0 ? item.serving_size_g : 100;
+  const multiplier = grams / baseServing;
+
+  return {
+    ...item,
+    serving_size_g: grams,
+    calories: item.calories * multiplier,
+    protein_g: item.protein_g * multiplier,
+    carbohydrates_total_g: item.carbohydrates_total_g * multiplier,
+    fat_total_g: item.fat_total_g * multiplier,
+    sugar_g: item.sugar_g * multiplier,
+    fiber_g: item.fiber_g * multiplier,
+  };
+};
+
 const buildLogPayload = (
   item: NutritionItem,
   logDate: string,
@@ -207,6 +223,7 @@ export default function NutritionScreen() {
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [activeAdd, setActiveAdd] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [gramsByResult, setGramsByResult] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchLogs(selectedDate);
@@ -242,8 +259,15 @@ export default function NutritionScreen() {
       const response = await api.searchNutrition(query.trim());
       if (response.success && response.data) {
         setResults(response.data.items || []);
+        setGramsByResult(
+          (response.data.items || []).reduce<Record<string, string>>((acc, item, index) => {
+            acc[`${item.name}-${index}`] = String(Math.round(item.serving_size_g || 100));
+            return acc;
+          }, {}),
+        );
       } else {
         setResults([]);
+        setGramsByResult({});
         setErrorMessage(
           response.details
             ? `${response.message || t("nutrition.noResultsFound")}: ${response.details}`
@@ -260,11 +284,14 @@ export default function NutritionScreen() {
 
   const handleAddLog = async (item: NutritionItem, index: number) => {
     const key = `${item.name}-${index}`;
+    const gramsValue = Number(gramsByResult[key] || item.serving_size_g || 100);
+    const grams = Number.isFinite(gramsValue) && gramsValue > 0 ? gramsValue : item.serving_size_g;
+    const adjustedItem = scaleNutritionItem(item, grams);
     setActiveAdd(key);
     setErrorMessage(null);
 
     try {
-      const payload = buildLogPayload(item, selectedDate);
+      const payload = buildLogPayload(adjustedItem, selectedDate);
       const response = await api.createDailyLog(payload, token || undefined);
       if (response.success) {
         await fetchLogs(selectedDate);
@@ -417,6 +444,13 @@ export default function NutritionScreen() {
             <VStack space="md">
               {results.map((item, index) => {
                 const key = `${item.name}-${index}`;
+                const gramsInput = gramsByResult[key];
+                const gramsValue = Number(gramsInput);
+                const hasValidGrams = gramsInput !== "" && Number.isFinite(gramsValue) && gramsValue > 0;
+                const displayItem = scaleNutritionItem(
+                  item,
+                  hasValidGrams ? gramsValue : item.serving_size_g,
+                );
                 return (
                   <SectionCard key={key}>
                     <HStack className="justify-between items-center mb-2">
@@ -425,7 +459,7 @@ export default function NutritionScreen() {
                           {item.name}
                         </Heading>
                         <Text className="text-xs" style={{ color: colors.textMuted }}>
-                          {t("nutrition.servingSizeValue", {
+                          {t("nutrition.baseNutritionFrom", {
                             value: formatNumber(item.serving_size_g, 0),
                           })}
                         </Text>
@@ -442,14 +476,29 @@ export default function NutritionScreen() {
                         )}
                       </Button>
                     </HStack>
-                    <AppTable
-                      rows={[
-                        { label: t("nutrition.calories"), value: formatNumber(item.calories, 0) },
-                        { label: t("nutrition.protein"), value: `${formatNumber(item.protein_g)} g` },
-                        { label: t("nutrition.carbs"), value: `${formatNumber(item.carbohydrates_total_g)} g` },
-                        { label: t("nutrition.fat"), value: `${formatNumber(item.fat_total_g)} g` },
-                      ]}
-                    />
+                    <Box className="mb-3">
+                      <Text className="text-xs mb-2" style={{ color: colors.textSubtle }}>
+                        {t("nutrition.grams")}
+                      </Text>
+                      <Input size="sm">
+                        <InputField
+                          value={gramsByResult[key] ?? ""}
+                          onChangeText={(value) =>
+                            setGramsByResult((current) => ({
+                              ...current,
+                              [key]: value.replace(/[^0-9.]/g, ""),
+                            }))
+                          }
+                          keyboardType="numeric"
+                          placeholder="100"
+                        />
+                      </Input>
+                    </Box>
+                    <NutritionRow label={t("nutrition.serving")} value={`${formatNumber(displayItem.serving_size_g, 0)} g`} />
+                    <NutritionRow label={t("nutrition.calories")} value={formatNumber(displayItem.calories, 0)} />
+                    <NutritionRow label={t("nutrition.protein")} value={`${formatNumber(displayItem.protein_g)} g`} />
+                    <NutritionRow label={t("nutrition.carbs")} value={`${formatNumber(displayItem.carbohydrates_total_g)} g`} />
+                    <NutritionRow label={t("nutrition.fat")} value={`${formatNumber(displayItem.fat_total_g)} g`} />
                   </SectionCard>
                 );
               })}

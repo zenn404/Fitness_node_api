@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Sportify",
-    "slug": "sportify",
+    "slug": "MyFitnessApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myfitnessapp",
+    "scheme": "MyFitnessApp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {

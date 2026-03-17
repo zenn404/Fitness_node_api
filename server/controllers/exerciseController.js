@@ -10,12 +10,16 @@ const getExercises = async (req, res) => {
       });
     }
 
-    const { muscle_group, difficulty, search } = req.query;
+    const { workout_id, muscle_group, difficulty, search } = req.query;
 
     let query = supabase
       .from("exercises")
       .select("*")
       .order("created_at", { ascending: false });
+
+    if (workout_id) {
+      query = query.eq("workout_id", workout_id);
+    }
 
     // Filter by muscle group
     if (muscle_group) {
@@ -104,12 +108,25 @@ const createExercise = async (req, res) => {
       });
     }
 
-    const { name, description, muscle_group, difficulty, image_url } = req.body;
+    const {
+      workout_id,
+      name,
+      description,
+      muscle_group,
+      difficulty,
+      sets,
+      reps,
+      rest_seconds,
+      order_index,
+      notes,
+      image_url,
+      tutorial_url,
+    } = req.body;
 
-    if (!name || !muscle_group) {
+    if (!workout_id || !name || !muscle_group) {
       return res.status(400).json({
         success: false,
-        message: "Please provide name and muscle_group",
+        message: "Please provide workout_id, name, and muscle_group",
       });
     }
 
@@ -117,11 +134,18 @@ const createExercise = async (req, res) => {
       .from("exercises")
       .insert([
         {
+          workout_id,
           name,
           description: description || null,
           muscle_group,
           difficulty: difficulty || "Beginner",
+          sets: sets || 3,
+          reps: reps || 10,
+          rest_seconds: rest_seconds || 60,
+          order_index: order_index || 0,
+          notes: notes || null,
           image_url: image_url || null,
+          tutorial_url: tutorial_url || null,
         },
       ])
       .select()
@@ -166,14 +190,34 @@ const updateExercise = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { name, description, muscle_group, difficulty, image_url } = req.body;
+    const {
+      workout_id,
+      name,
+      description,
+      muscle_group,
+      difficulty,
+      sets,
+      reps,
+      rest_seconds,
+      order_index,
+      notes,
+      image_url,
+      tutorial_url,
+    } = req.body;
 
     const updateData = {};
+    if (workout_id !== undefined) updateData.workout_id = workout_id;
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (muscle_group !== undefined) updateData.muscle_group = muscle_group;
     if (difficulty !== undefined) updateData.difficulty = difficulty;
+    if (sets !== undefined) updateData.sets = sets;
+    if (reps !== undefined) updateData.reps = reps;
+    if (rest_seconds !== undefined) updateData.rest_seconds = rest_seconds;
+    if (order_index !== undefined) updateData.order_index = order_index;
+    if (notes !== undefined) updateData.notes = notes;
     if (image_url !== undefined) updateData.image_url = image_url;
+    if (tutorial_url !== undefined) updateData.tutorial_url = tutorial_url;
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
