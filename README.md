@@ -12,7 +12,7 @@ Full-stack fitness tracking project with:
 - `server/`: Express API + Supabase
 - `client/`: Expo React Native app 
 
-This project covers authentication, workout/exercise management, dashboard analytics, nutrition logging, onboarding, and profile management.
+This project covers authentication, workout/exercise management, dashboard analytics, AI chatbot, nutrition logging, onboarding, and profile management.
 
 ## Project Goals
 
