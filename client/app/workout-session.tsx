@@ -244,11 +244,6 @@ export default function WorkoutSessionScreen() {
     }
 
     try {
-      const supported = await Linking.canOpenURL(tutorialUrl);
-      if (!supported) {
-        Alert.alert(t("session.cannotOpenLink"), t("session.invalidTutorialLink"));
-        return;
-      }
       await Linking.openURL(tutorialUrl);
     } catch (error) {
       console.error("Failed to open tutorial link:", error);
