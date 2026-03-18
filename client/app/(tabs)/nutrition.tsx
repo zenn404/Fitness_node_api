@@ -209,6 +209,19 @@ function TotalsChart({
   return <NativeBarChart data={data} trackColor={trackColor} labelColor={labelColor} />;
 }
 
+function NutritionRow({ label, value }: { label: string; value: string }) {
+  return (
+    <HStack className="justify-between items-center py-1.5">
+      <Text className="text-sm" style={{ color: "#9ca3af" }}>
+        {label}
+      </Text>
+      <Text className="text-sm font-semibold" style={{ color: "#f3f4f6" }}>
+        {value}
+      </Text>
+    </HStack>
+  );
+}
+
 export default function NutritionScreen() {
   const { t } = useTranslation();
   const { theme } = useThemeStore();
